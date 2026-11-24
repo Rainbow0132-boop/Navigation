@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>ZenMap · 极简导航</title>
+  <meta name="description" content="无广告、零干扰的极简出行导航。公交地铁、自驾、步行，一次只做一件事。" />
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><polygon points='3 11 22 2 13 21 11 13 3 11' fill='%231d1d1f' stroke='%23ffffff' stroke-width='1.2'/></svg>" />
+
+  <script src="./assets/vendor/tailwind-browser.js"></script>
+  <link rel="stylesheet" href="./assets/css/zen.css" />
+
+  <style type="text/tailwindcss">
+    @theme {
+      --color-zen-surface: var(--z-surface);
+      --color-zen-ink: var(--z-ink);
+      --color-zen-line: var(--z-line);
+      --color-zen-ghost: var(--z-ghost);
+      --color-zen-fill: var(--z-fill);
+    }
+  </style>
+</head>
+<body class="min-h-dvh bg-zen-surface text-zen-ink antialiased">
+
+  <header class="pointer-events-none fixed inset-x-0 top-0 flex items-center justify-between px-6 pt-[max(1.25rem,env(safe-area-inset-top))]">
+    <span class="zen-label">ZenMap</span>
+    <span id="net-hint" hidden class="zen-badge">离线</span>
+  </header>
+
+  <main class="flex min-h-dvh flex-col items-center justify-center px-6">
+    <div class="mb-10 text-center sm:mb-12">
+      <h1 class="text-[1.75rem] font-semibold leading-tight tracking-[-0.02em] sm:text-[2.125rem]">现在去哪儿？</h1>
+      <p class="mt-3 text-xs leading-6 text-zen-ghost sm:text-sm">
+        无广告 · 零干扰<br class="sm:hidden" />
+        <span class="sm:ml-2">公交地铁 / 自驾 / 步行</span>
+      </p>
+    </div>
+
+    <button id="start-btn" type="button"
+      class="zen-btn-primary group px-9 py-5 text-xl font-semibold tracking-[-0.02em] sm:px-12 sm:py-6 sm:text-2xl">
+      <span aria-hidden="true" class="inline-flex transition-transform duration-200 group-hover:-translate-y-0.5 motion-reduce:transition-none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="size-6"><polygon points="3 11 22 2 13 21 11 13 3 11" /></svg></span>
+      <span>开始导航</span>
+      <span aria-hidden="true" class="inline-flex transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="size-5"><path d="m9 18 6-6-6-6" /></svg></span>
+    </button>
+  </main>
+
+  <div id="panel" data-open="false">
+    <div id="scrim" class="zen-scrim absolute inset-0 bg-black/60"></div>
+
+    <div class="absolute inset-x-0 bottom-0 flex justify-center sm:inset-0 sm:items-center sm:p-6">
+      <section id="sheet" class="zen-panel relative w-full border-t border-zen-line bg-zen-surface px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6 sm:max-w-lg sm:border sm:px-9 sm:py-9"
+        role="dialog" aria-modal="true" aria-labelledby="step-label" data-open="false">
+
+        <div class="flex items-start justify-between gap-6">
+          <div class="min-w-0">
+            <h2 id="step-label" class="zen-label">目的地</h2>
+            <p id="step-value" hidden class="mt-3 truncate text-lg font-medium tracking-[-0.02em]"></p>
+          </div>
+          <button id="close-btn" type="button" aria-label="关闭"
+            class="-mr-3 -mt-2 grid size-11 place-items-center text-zen-ghost focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zen-ink">
+            <span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="size-5"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg></span>
+          </button>
+        </div>
+
+        <form id="ask-form" class="mt-7" novalidate>
+          <label for="destination" class="sr-only">输入目的地</label>
+          <input id="destination" name="destination" type="text" enterkeyhint="go" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="60"
+            placeholder="输入地点，如：虹桥火车站"
+            class="w-full appearance-none bg-transparent pb-4 text-2xl font-medium tracking-[-0.02em] caret-zen-ink outline-none placeholder:font-normal placeholder:text-zen-ghost sm:text-3xl" />
+          <p id="ask-error" hidden class="mt-3 text-sm text-zen-ghost">先写一个目的地</p>
+          <div id="examples" class="mt-5 flex flex-wrap gap-2">
+            <button type="button" data-example="虹桥火车站" class="zen-chip">试试：虹桥火车站</button>
+            <button type="button" data-example="北京西站" class="zen-chip">试试：北京西站</button>
+            <button type="button" data-example="广州塔" class="zen-chip">试试：广州塔</button>
+          </div>
+          <button type="submit"
+            class="zen-btn-primary mt-8 w-full text-base font-medium focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-zen-ink">
+            <span>确认目的地</span>
+            <span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="size-5"><path d="m9 18 6-6-6-6" /></svg></span>
+          </button>
+        </form>
+
+        <div id="mode-step" class="mt-6" hidden>
+          <div class="zen-list" role="group" aria-label="选择出行方式">
+            <button type="button" data-mode="transit" class="zen-row">
+              <span aria-hidden="true" class="zen-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="size-6"><path d="M8 6v6" /><path d="M15 6v6" /><path d="M2 12h19.6" /><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3" /><circle cx="7" cy="18" r="2" /><path d="M9 18h5" /><circle cx="16" cy="18" r="2" /></svg></span>
+              <span class="min-w-0">
+                <span class="block text-base font-medium tracking-[-0.01em]">公交地铁</span>
+                <span class="mt-0.5 block text-xs text-zen-ghost">到站提醒</span>
+              </span>
+              <span aria-hidden="true" class="zen-row-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="size-5"><path d="m9 18 6-6-6-6" /></svg></span>
+            </button>
+            <button type="button" data-mode="drive" class="zen-row">
+              <span aria-hidden="true" class="zen-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="size-6"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" /><circle cx="7" cy="17" r="2" /><path d="M9 17h6" /><circle cx="17" cy="17" r="2" /></svg></span>
+              <span class="min-w-0">
+                <span class="block text-base font-medium tracking-[-0.01em]">自驾</span>
+                <span class="mt-0.5 block text-xs text-zen-ghost">前方加油站</span>
+              </span>
+              <span aria-hidden="true" class="zen-row-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="size-5"><path d="m9 18 6-6-6-6" /></svg></span>
+            </button>
+            <button type="button" data-mode="walk" class="zen-row">
+              <span aria-hidden="true" class="zen-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="size-6"><path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z" /><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z" /><path d="M16 17h4" /><path d="M4 13h4" /></svg></span>
+              <span class="min-w-0">
+                <span class="block text-base font-medium tracking-[-0.01em]">步行</span>
+                <span class="mt-0.5 block text-xs text-zen-ghost">天气提示</span>
+              </span>
+              <span aria-hidden="true" class="zen-row-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="size-5"><path d="m9 18 6-6-6-6" /></svg></span>
+            </button>
+          </div>
+          <button id="edit-ask" type="button"
+            class="mt-5 text-sm text-zen-ghost underline-offset-4 transition-colors hover:text-zen-ink hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-zen-ink">重新输入目的地</button>
+        </div>
+
+        <div id="summary-step" class="mt-6" hidden>
+          <dl class="zen-radius bg-zen-fill grid grid-cols-[4.5rem_1fr] gap-y-4 p-5 text-base">
+            <dt class="text-zen-ghost">目的地</dt>
+            <dd id="sum-dest" class="truncate font-semibold tracking-[-0.02em]"></dd>
+            <dt class="text-zen-ghost">方式</dt>
+            <dd id="sum-mode" class="font-semibold tracking-[-0.02em]"></dd>
+          </dl>
+          <p class="mt-6 text-sm leading-6 text-zen-ghost">下一步会请求定位权限；拒绝也没关系，可以手动设置起点。</p>
+          <button id="open-map" type="button"
+            class="zen-btn-primary mt-7 w-full text-base font-medium focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-zen-ink">
+            <span>打开地图</span>
+            <span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="size-5"><path d="m9 18 6-6-6-6" /></svg></span>
+          </button>
+          <div class="mt-3 flex flex-col gap-3 sm:flex-row">
+            <button id="back-mode" type="button"
+              class="zen-btn-secondary flex-1 text-base focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-zen-ink">换一种方式</button>
+            <button id="restart-btn" type="button"
+              class="zen-btn-secondary flex-1 text-base focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-zen-ink">重新开始</button>
+          </div>
+        </div>
+
+        <p class="zen-label mt-8 hidden sm:block">ESC 关闭</p>
+      </section>
+    </div>
+  </div>
+
+  <script src="./assets/js/home.js" defer></script>
+</body>
+</html>

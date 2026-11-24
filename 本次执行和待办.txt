@@ -1,0 +1,156 @@
+第十一步（emoji 换线性 SVG + 去蓝色回黑白灰）已在本机跑通并截图存档。
+
+已完成
+
+图标全部换成同一套外壳的 inline SVG（viewBox 0 0 24 24、fill=none、stroke=currentColor、stroke-linecap/linejoin=round），尺寸用 Tailwind size-4/5/6，箭头与叉号 stroke-width=2、其余 1.5。逐个替换：🚩→导航箭头 polygon（首页开始按钮 + 两页 favicon 的 data URI 同步换成同一图形）；🚌→公交、🚗→自驾、🚶→步行（首页三行列表 .zen-row-icon）；⛽→加油机 size-4（地图页"附近加油站"按钮与途经胶囊，按钮里的中文文字未动）；←→chevron-left size-5（地图页返回链接）；→→chevron-right size-5（首页确认目的地/打开地图、地图页手动起点提交）；✕→两条 path size-5（首页关闭按钮，顺手删掉它的 text-xl）。定位按钮的圆圈十字线 SVG 保持原样（实测 stroke-width 已是 1.5）。原来的 <span aria-hidden="true"> 外壳全部保留，只换里面的内容。
+
+去掉蓝色：删掉 --z-accent（第十步已删的 --z-accent-strong/--z-accent-line 本次不存在，无需再删），--z-accent-soft 从 rgba(0,122,255,.12) 改成中性浅灰（亮 #f2f2f7 / 暗 #1c1c1e）；两页 @theme 删 --color-zen-accent，页面里 20 处 caret-zen-accent / outline-zen-accent / focus-visible:outline-zen-accent（首页 7、地图页 13）全换成 zen-ink 版本。主按钮 .zen-btn-primary 从蓝色实底改成 var(--z-ink) 实底 + var(--z-surface) 字（亮黑底白字、暗白底黑字），hover/active 从 filter:brightness 换成 color-mix(in srgb, var(--z-ink) 84%/72%, var(--z-surface))，暗色那条 brightness 覆盖规则整块删除；.zen-icon-solid（确认起点）、.zen-pill-solid（途经加油站）、#route-options .zen-option-active、.gas-row[aria-pressed=true] 同样改 ink 实底 + surface 字；.zen-chip/.zen-badge/#route-safety 徽章用中性浅灰；.zen-marker-dest 边框、#status-dot、输入框聚焦下划线与 caret、各处 focus 描边全转 ink；::selection 从蓝色 12% 改墨色 18%。保留 --z-grade-high/mid/low 绿橙红三色不动（含暗色变体）。
+
+配套：.zen-row-icon/.zen-row-arrow/.zen-icon-solid 从 emoji 的 font-size 行高对齐改成 display:grid + place-items:center，图标靠 currentColor 继承，随明暗自动反色；.gas-row 选中行的 .gas-meta 从蓝色改成 surface + opacity .8。
+
+逻辑零改动：home.js/map.js/drive.js/transit.js/gas.js/store.js 一行未动，所有 id、data-mode、data-example、aria-*、[hidden] 语义与覆盖规则原样保留，只改 index.html、map.html 的标签内容与 class，以及 zen.css。未新增依赖、未加图片。
+
+实测（无头 Edge + CDP，遍历 body 全部元素 12 个颜色属性 + TreeWalker 遍历全部文本节点）：亮/暗 × 430×932 与 1280×860 四种组合下，emoji 命中 [] 、蓝色命中 []（判定条件 b>120 且 b>r+45 且 b>g+30，另查 007aff/0a84ff/4f46e5/818cf8）；--z-accent 实测为空、--z-accent-soft=#f2f2f7/#1c1c1e；主按钮亮 bg=rgb(29,29,31) color=rgb(255,255,255) backgroundImage=none radius=999px、暗 bg=rgb(245,245,247) color=rgb(0,0,0)；图标实测 24×24（sw 1.5）、20×20（sw 2 箭头/叉，定位 1.5）、16×16（加油机），stroke 全部 currentColor 且解析为对应前景色，bus/car/footprints 子元素 7/4/4，aria-hidden=true、baselineShift=0。真实鼠标点击走完首页三步（开始→北京西站→自驾，三行图标 rows="svg,svg,svg"）与地图页：自驾 OSRM 3 条方案、选中方案 bg=rgb(29,29,31) 白字且内部"安全 68·中"橙、"安全 92·优"绿仍在、目的地 marker border=rgb(29,29,31)；公交离线演示 41 分钟、到站提醒横幅 ink 底 surface 字并在 11s 自动收起；手动起点表单按钮 bg=rgb(29,29,31) 白字 + chevron SVG、caret=rgb(29,29,31)。加油站列表这次实网 Overpass 被限流（overpass.openstreetmap.fr ×2 + overpass-api.de 请求后 8s 仍"正在查找附近加油站…"，属既有数据源问题，与本次改动无关），改用与 gas.js normalizeFuel 同形状的缓存数据注入后验证：3 行、选中行 bg=rgb(29,29,31) color=rgb(255,255,255) meta=rgb(255,255,255) op .8、途经胶囊 bg=rgb(29,29,31) 且内含 SVG。reduced-motion 下主按钮/行/胶囊过渡均 0s、图标几何不变。五种场景控制台报错 0，外部域名仍是 tiles/osrm/photon/open-meteo/overpass，未新增。
+截图：screenshots/step11-light-mobile-1..8（含 -6b-gas-selected、-6c-origin）、step11-dark-mobile-*、step11-light-desktop-*、step11-dark-desktop-*、step11-light-reduced-*，另有 step11-gas-cache-selected.png（缓存注入下的选中态）、step11-reduced-home.png、step11-reduced-map.png。
+
+遗留
+
+Overpass 实网限流导致加油站列表这次只能靠缓存验证样式，联网正常时仍是真实数据；本次未改数据源与重试策略（属逻辑改动）。
+选中加油站的地图 marker 与激活路线颜色仍由 map.js 生成，CSS 无法单独染色，沿用第十步的结论。
+第十一步只在本地验证，未提交 git，也未部署 Qoder Sites。
+
+---
+
+第十步（回退花活 + 按苹果 HIG 做减法式打磨）已在本机跑通并截图存档。
+
+已完成
+
+撤销第九步的过度设计：删掉 .zen-cta 的 135deg 靛蓝渐变、.zen-hero 的 40px 网格纹理与 radial 紫色光晕（连同 --z-grid-line、--z-accent-strong、--z-accent-line 三个变量一起删）、.zen-card/.zen-card-icon 色块卡片、.zen-fab；地图页顶栏与底部 sheet 去掉 sm:max-w-3xl mx-auto 居中框，改成全幅贴边悬浮层。
+配色令牌换成 iOS 系统色：亮 #ffffff/#1d1d1f/#86868b/#e5e5ea + 新增 --z-fill #f2f2f7，暗 #000000/#f5f5f7/#98989d/#2c2c2e/#1c1c1e；--z-accent 亮 #007AFF、暗 #0A84FF，--z-accent-soft 统一 12%；评分三色换 #34C759/#FF9500/#FF3B30（暗色 #30D158/#FF9F0A/#FF453A）。--z-radius 20px、新增 --z-radius-btn 14px、--z-ease 换成 iOS 弹簧 cubic-bezier(0.34,1.56,0.64,1)，阴影改极淡大扩散 0 8px 30px rgba(0,0,0,.08)，暗色 --z-shadow-sm 置 none、靠细描边分层。
+字体：两页删掉 Google Fonts 的 2 行 preconnect + 1 行 stylesheet，body 换系统栈 -apple-system, "SF Pro Display", "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui；meta theme-color 暗色值同步改 #000000（这是本次唯一一处非 class 的 HTML 属性改动）。
+毛玻璃只用在地图页四处：.zen-topbar、#sheet、.zen-pill（加油站悬浮按钮）、#gas-panel，统一 rgba(255,255,255,.72)（暗 rgba(28,28,30,.72)）+ saturate(180%) blur(20px)，@supports 不支持时回退纯色；首页 sheet 明确不用毛玻璃，纯白/纯黑。
+按钮全部改成苹果的填充胶囊：.zen-btn-primary（开始导航/确认目的地/打开地图，系统蓝实底白字、hover brightness .92、active scale .97）、.zen-btn-secondary（换一种方式/重新开始，#f2f2f7 浅灰填充）、.zen-mini（重试定位/试一下提醒/提醒距离下拉）。出行方式从三张卡片退回 iOS 设置页三行列表：.zen-list 圆角 20px + 1px 细描边，.zen-row 纯文字行 + ::before 从 62px 起 inset 分割线，hover 只变浅灰底，右侧 → 箭头。
+排版：h1 与 #route-summary 28px（桌面 34px）/600/-0.02em，小标签统一 11px uppercase 0.1em，正文行高 1.5，数字 tabular-nums。动效统一 0.25–0.32s 弹簧曲线，zen-rise/面板过渡沿用；reduced-motion 块补齐新组件，过渡 0s、动画 none。强调色只留在：三个主按钮、选中方案按钮、途经加油站胶囊、选中加油站行、目的地 marker、输入框聚焦下划线与 caret；起点状态点从强调色退回墨色。
+逻辑零改动：home.js/map.js/drive.js/transit.js 一行未动，所有 id、data-mode、data-example、aria-*、[hidden] 语义与 [hidden] 覆盖规则原样保留，只改 HTML 的 class 与 zen.css；@theme 增加 --color-zen-fill 供 bg-zen-fill 使用。
+
+实测（无头 Edge + CDP，计算样式逐项断言 + 真实鼠标点击）：亮/暗 × 430×932 与 1280×860 四种组合，令牌实测 --z-accent=#007aff/#0a84ff、--z-fill=#f2f2f7/#1c1c1e；主按钮 backgroundImage=none、backgroundColor=rgb(0,122,255)、borderRadius=999px；main backgroundImage=none（无网格无光晕）；首页 sheet backdropFilter=none、backgroundColor=rgb(255,255,255)/rgb(0,0,0)；地图 topbar backdropFilter=saturate(1.8) blur(20px)、left=0 width=430/430（全幅不居中），#sheet 同样 left=0 width=430/430，#map 1280/1280；.zen-list borderRadius=20px + 1px 描边、分割线 left=62px 且首行无分割线、图标块背景透明（无底色）；#route-summary 28px/600/-0.56px/tabular-nums；选中方案 rgb(0,122,255) 白字、未选中透明底细描边；徽章与安全评分胶囊改浅灰填充；加油站面板 20px 圆角毛玻璃、选中行 rgba(0,122,255,.12) 浅底 + 蓝字、途经胶囊 rgb(0,122,255)。body 计算字体为 -apple-system 系统栈，外部域名只剩 tiles/osrm/photon/open-meteo（fonts.googleapis.com 与 fonts.gstatic.com 已消失），无横向溢出。真实鼠标点击走完三步流程：开始导航→面板打开→示例"北京西站"→选择出行方式（3 行）→点自驾→摘要"北京西站 / 自驾"→换一种方式回到方式选择→ESC 关闭（data-open=false）；鼠标路径下 .zen-row:focus-visible 无描边（键盘聚焦才显示 2px 内嵌强调色环）。功能回归：自驾 3 条方案与评分因子、加油站面板与途经改线、天气 4° 晴·体感 0°、公交离线演示 41 分钟与上下车站、到站提醒横幅点测试后出现并在 10s 自动收起、重试定位与手动起点表单正常；步行仍不画线（map.js 只对 drive 规划路径，属既有逻辑）。reduced-motion 实测 #start-btn/.zen-row/#sheet/.leaflet-bottom 过渡均 0s，.zen-rise 与 marker ping、#status-dot、#alert-banner 动画均 none。五种场景控制台报错数均为 0。
+截图：screenshots/step10-light-mobile-1..7、step10-dark-mobile-*、step10-light-desktop-*、step10-dark-desktop-*、step10-light-reduced-*（每组含 -6b-gas-selected、-6c-origin），以及 step10-func-1-walk-weather、-2-alert、-3-transit、-4-home-mode、-5-home-summary。
+
+遗留
+
+桌面端底部 sheet 与顶栏按"全幅贴边"要求铺满 1280px，路线面板左右两端拉开，视觉密度比移动端低；若要收窄需重新引入 max-width，与本次要求冲突，保持现状。
+选中加油站的地图 marker 仍无强调色、激活路线仍是墨色：两者颜色都由 map.js 生成，不改逻辑无法单独染色，本次只在列表行与途经胶囊上体现选中。
+Google Fonts 删除后中文实际落到系统 PingFang/微软雅黑，Windows 上没有 SF Pro，字形与真机 iOS 有差异，这是系统字体栈的既定代价。
+暗色瓦片仍是浅色灰度底图，与深色 sheet 对比强；换深色瓦片属于数据源改动，未做。
+第十步只在本地验证，未提交 git，也未部署 Qoder Sites。
+
+---
+
+第九步（视觉质感升级：强调色 + 层次 + 毛玻璃）已在本机跑通并截图存档。
+
+已完成
+
+zen.css 的 :root 与 dark 块补齐设计令牌：--z-accent（亮 #4f46e5 / 暗 #818cf8）、--z-accent-strong、--z-accent-soft、--z-accent-line、--z-on-accent、--z-surface-glass、--z-grid-line、--z-shadow-sm、--z-shadow-md、--z-radius（0.75rem）。评分三色与原有四色变量保持不变。
+新增组件层：.zen-cta（渐变主按钮）、.zen-btn / .zen-btn-solid / .zen-btn-center、.zen-card + .zen-card-icon、.zen-chip、.zen-badge、.zen-pill、.zen-icon、.zen-icon-solid、.zen-topbar、.zen-glass、.zen-hero、.zen-label、.zen-num，全部只用现有变量，未引入第三方库与图片。
+首页：hero 区加 h1"现在去哪儿？"，原标语下移为副标题；背景用两层纯 CSS 渐变（radial 强调色光晕 + 40px 网格，mask 径向淡出）。"开始导航"从描边大方框改成靛蓝渐变实底、16px 圆角、阴影、hover 上浮 2px 并加箭头。出行方式从三行列表改成三张卡片（emoji 放进 44px 强调色浅底块 + 标题 + 说明 + 右箭头），移动端单列、sm 起三列。示例目的地改成胶囊 chip，输入框下划线聚焦变强调色。
+地图页：顶部三个控件合并成一条毛玻璃悬浮条（blur 16px + 半透明 surface + 细描边 + 阴影，sm 起居中 max-w-3xl）；底部 sheet 与首页统一为圆角顶 + 阴影 + 毛玻璃，sm 起收窄居中；加油站按钮/途经胶囊改成圆角胶囊 + hover 上浮；起点状态点、目的地 marker 描边、选中方案按钮、路线标签徽章、安全评分徽章用强调色，其余保持黑白灰。
+排版层级：小标签统一 .zen-label（uppercase 字距从 0.3em 收到 0.18em），#route-summary 提到 24px / 600 / tabular-nums，天气温度 1.75rem，方案与评分数字全部 tabular-nums 对齐。动效统一 0.2s ease，面板展开曲线改 cubic-bezier(0.22,0.61,0.36,1)，ping 动画放慢到 3.2s 并降低透明度；新增的 hover 位移与过渡全部在 prefers-reduced-motion 下关闭。
+逻辑零改动：home.js、map.js、drive.js、transit.js 等一行未动，所有 id、data-mode、data-example、aria-*、[hidden] 语义原样保留；只改了 HTML 的 class、少量新增无 id 的包装元素，以及 zen.css。Tailwind 的 @theme 里加了 --color-zen-accent 供 caret/outline 工具类使用。
+实测（无头 Edge + CDP，计算样式逐项断言，确认新 class 真的被渲染、没被 Tailwind 运行时覆盖）：亮色/暗色 × 430×932 与 1280×860 四种组合下，主按钮 backgroundImage=linear-gradient 且 borderRadius=16px、sheet backdrop-filter=blur(16px)、topbar 圆角 18px、#route-summary 24px/600/tabular-nums、选中方案底色 rgb(79,70,229) 且其内评分文字转白 0.82、目的地 marker 描边转强调色。首页三步流程走通（确认→选择出行方式→摘要），ESC 关闭面板（data-open 回到 false），桌面端三列 138px×3、无横向溢出（scrollWidth=clientWidth）。地图页自驾 3 条方案切换、评分因子、加油站列表与选中行（强调色浅底）、公交离线演示与到站提醒均正常。reduced-motion 下 .zen-cta 过渡为 0s、ping 动画为 none。四个场景控制台均无报错，外部域名仍是 fonts / tiles / photon / osrm / open-meteo，未新增请求源。
+截图：screenshots/step9-light-mobile-1..7、step9-dark-mobile-*、step9-light-desktop-*、step9-dark-desktop-*、step9-light-reduced-*、step9-regression-options.png。
+
+遗留
+
+选中加油站的地图 marker 没加强调色：marker 的 html 由 map.js 固定生成，不改逻辑就无法区分选中项，改为在列表选中行上加强调色浅底。
+激活路线仍是墨色：polyline 颜色由 map.js 读 --z-ink/--z-ghost，CSS 无法只改选中那条；强调色改用在选中方案按钮上代表当前路线。
+安全评分徽章在 summary 下方独立一行，没并进右侧：分数由 JS 注入，不动 DOM 结构就只能原位美化。
+暗色模式下地图瓦片仍是浅色灰度，与深色 sheet 对比强烈；换深色瓦片源属于数据源改动，本次未做。
+第九步只在本地验证，未提交 git，也未部署 Qoder Sites。
+
+---
+
+第八步（自驾多方案 + 安全评分）已在本机跑通并截图存档。
+
+已完成
+
+新增 assets/js/safety.js：scoreRoute(points, {weather}) 返回 {score, grade, factors}，扣分项固定为风险区（施工/事故 −12、行人区 −8）、早晚高峰 7–9 与 17–19（−8）、起点天气（雨雪 −10、雾霾 −6）、里程超 15 km 每多 5 km −3（封顶 −9）；无因子时补一条"无明显风险因子"。风险区 RISK_ZONES 是写死的演示数据（北京 2 处、上海 2 处，半径 300–800 m），坐标取自驾路线实测点，保证不同方案能拉开分差。
+drive.js 的 fetchDriveRoutes() 改成返回数组：OSRM 加 &alternatives=true&steps=false，最多取 3 条真实路线；只有 1 条时补直线估算凑够 2 条；请求失败时由调用方兜底。直线估算的弯折系数从固定 1.3 倍直线距离换成 ±0.12 弦向偏移，两条候选形状不同，里程分别是 9.1 km 与 9.7 km。
+map.js 增加 state.routeCandidates 与 selectedRouteIndex，applyDriveRoutes() 先取天气再逐条打分，drawDriveSelection() 每次先 clearRouteLayers() 再画：选中项墨色 weight 4，未选中灰色 weight 3 透明度 0.35，fitBounds 覆盖全部候选。缓存键 zenmap:drive:v1:起点>终点 现在存整个数组。
+map.html 路线面板下加 #route-options（方案按钮）和 #route-safety（评分与因子），zen.css 补 .zen-grade-high/mid/low 三档颜色（含深色模式）与 #route-options[hidden]、#route-safety[hidden] 覆盖。
+实测（无头 Edge + CDP，430×932）：自驾北京站→北京西站 OSRM 返回 2 条真路线加 1 条直线估算，标签"OSRM · 自驾 · 3 条方案"，方案一 13.0 km 安全 76 良（两条 −12 因子）、方案二 15.0 km 安全 100 优、方案三 9.1 km 安全 76 良；点方案二后 aria-pressed 切换、总述变 15.0 km、评分区变"100 · 优 / 无明显风险因子"，path 元素数始终 4 个（1 精度圈 + 2 灰 + 1 黑），无残留图层。OSRM 单独失败（其余网络正常）与整机断网两种情况都落到 2 条虚线方案，标签"直线估算"，提示"路径服务暂不可用，当前为直线估算"。重进页面 OSRM 请求数 1→0，走数组缓存。公交回归仍是"离线演示"加到站提醒，步行回归不画线、只显示天气。三个场景控制台均无报错。
+截图：screenshots/step8-drive-options-1.png、step8-drive-options-1-alt.png、step8-drive-osrmfail.png、step8-drive-offline-fallback.png、step8-drive-cache.png、step8-transit-regression.png、step8-walk-regression.png。
+
+遗留
+
+安全评分是启发式估算，风险区为写死的演示数据，只覆盖北京、上海，其他城市只会命中天气/高峰/里程三项。
+未选中路线的灰色透明度 0.35 在浅色底图上偏淡，截图里辨识度一般；改深需要同时验证深色模式，本次按规格值保留。
+高德 Key 仍为空，公交依旧是"离线演示"；步行仍没有路径。
+第八步只在本地验证，未提交 git，也未部署 Qoder Sites。
+
+---
+
+第七步（去 CDN 依赖、体验与兼容修补）已在本机跑通并截图存档。
+
+已完成
+
+把 Tailwind 浏览器版和 Leaflet 1.9.4（js/css/images）落到 assets/vendor/，index.html 与 map.html 不再引用 cdn.jsdelivr.net 和 unpkg。本机实测 cdn.jsdelivr.net 会被连接重置（curl 返回 000），此前一旦访问失败整页会退化成无样式文本，现在只剩 Google Fonts 还在 CDN，失败也只影响字体。
+首页目的地输入框下加了三枚示例按钮（虹桥火车站 / 北京西站 / 广州塔），点一下直接填好并进入"选择出行方式"，实测 step-label 从"确认"变"选择出行方式"、输入框同步。
+geocode() 增加本地兜底表 PLACE_FALLBACK（12 个常用站点，坐标取自 OSM/photon 实测）：photon 无结果或被限流返回 HTML 时，先取过期缓存，再取兜底表。实测断网状态下手动输入"西安北站"仍能定位成功。
+AbortSignal.timeout 统一收进 ZenNet.timeoutSignal()，net.js、gas.js、transit.js 三处调用点全部改走它；不支持的老 Safari 退化成 AbortController + setTimeout，不再直接抛错。
+实测回归：自驾 OSRM 真路线 13.0 km / 约 15 分钟；公交仍是"离线演示"加到站提醒，上/下车与提醒控件正常显示；步行不画线；断网直线估算正常。控制台无新增报错。
+截图：screenshots/step7-home-examples.png、step7-drive-osrm.png、step7-transit.png、step7-geocode-fallback.png、step7-home-local-assets.png、step7-drive-local-assets.png。
+
+遗留
+
+Google Fonts 仍在 CDN，弱网下首屏字体会回退，不影响布局。
+兜底表只覆盖 12 个地名，且是精确匹配；拼错或冷门地名依旧解析不出来。没接 Nominatim 第二源：它在同等网络下并不比 photon 稳，且有使用条款限制，性价比低。
+OSRM 公共服务仍是海外单机节点，长距离直线估算的耗时按 40 km/h 算，与真实路况无关。
+高德 Key 仍为空，公交依旧是"离线演示"。
+第七步只在本地验证，未提交 git，也未部署 Qoder Sites。
+
+---
+
+第六步（自驾路线）已在本机跑通并截图存档；公交、步行两条老链路做了回归，未见退化。
+
+已完成
+
+新增 assets/js/drive.js：接 OSRM 公开路由服务（免 Key、纯 GET、CORS 放行），把 GeoJSON 的 [lng,lat] 转成 {lat,lng} 点串，返回 distance 与 duration；服务不可用时退化为 buildDriveEstimate()，按直线距离和 40 km/h 估算。
+map.js 增加 planDriveTrip()，与公交共用同一套调度入口 maybePlanRoute()、同一套缓存层（30 分钟 TTL、键名 zenmap:drive:v1:起点>终点）和同一套图层清理。
+map.html 的路线面板拆出可复用结构：标题按模式切换（公交路线 / 驾车路线），上车下车行、到站提醒控件、提醒状态行在非公交模式下隐藏；zen.css 补了 #route-stops[hidden]、#route-remind[hidden] 两条覆盖，避免被 Tailwind 的 grid/flex 工具类顶掉。
+实测：自驾北京站→北京西站，OSRM 返回 13.0 km / 约 15 分钟，地图沿真实道路画线；重进页面 OSRM 请求数从 1 次降到 0 次，走缓存；断网后改起点，标签变“直线估算”、虚线画直线、提示“路径服务暂不可用”；公交回归仍是“离线演示”线路加到站提醒；步行回归不画线、只显示天气。
+控制台无新增报错。
+截图：screenshots/step6-drive-osrm.png、step6-drive-cache.png、step6-drive-offline-estimate.png、step6-transit-regression.png、step6-walk-regression.png。截图用无头 Edge + CDP 抓取（内置浏览器视口被隐藏，且本机访问 cdn.jsdelivr.net 被重置，截图脚本里把该请求改写到本地 Tailwind 副本）。
+
+遗留
+
+OSRM 公共服务是海外单机节点，中国路网覆盖一般、长距离可能超时；超时后目前直接落到直线估算，没有第二个路由源。
+自驾没有真实路况与耗时修正，也没有把“途经加油站”算进路径，仍是原路线上加标记。
+cdn.jsdelivr.net 在本机被连接重置，页面样式全靠这个 CDN；一旦评委网络同样受限，整站会退化成无样式文本。建议换成 unpkg 或把 Tailwind 落到本地。
+高德 Key 仍为空，公交依旧是“离线演示”。
+步行仍没有路径，只有天气。
+第六步只在本地验证，未提交 git，也未部署 Qoder Sites。
+
+---
+
+第五步的代码已在本机交付并做过验证；尚未完成的主要是“真实数据源、真实断网、部署”这三类验证。
+
+已完成
+
+新增统一缓存层 store.js：负责 sessionStorage 的封装、TTL、过期数据兜底，以及在 sessionStorage 不可用时回退到内存。
+新增统一网络层 net.js：统一处理超时、重试和离线状态。
+map.js 接入上述两个模块：公交路线缓存 30 分钟；地理编码、反向地理编码、加油站、天气都改用统一缓存；请求失败时回退到上次数据，并标注“离线缓存”。
+目的地解析期间增加“正在定位目的地…”提示；断网时 map.html 显示“网络已断开 · 正在使用本地缓存”。
+gas.js 离线时不再对四个端点逐个空等重试。
+实测：再次打开加油站时 0 次 Overpass 请求；加油站、天气在模拟失败后能显示缓存；预置公交缓存后走缓存分支；模拟网络失败时起点报错正常、按钮恢复；控制台无报错。
+截图：screenshots/step5-offline.png。因 Qoder 内置浏览器视口被隐藏，这张图是用无头 Edge 构造缓存并触发断网事件后截取的。
+未完成
+
+高德 Key 仍为空：公交缓存只用预置的规范化路线验证过读取路径，没有验证真实高德返回后的缓存写入。
+“离开演示模式”未验证：未配置 Key 时生成的演示线路不会写入缓存。
+断网是模拟的：只通过改写 navigator.onLine、拒绝 fetch 来验证，没有做真实断网和弱网限速测试。
+请求去重尚未做成全局进行中请求合并，目前只依赖现有的 routePending、loading 状态，防重复触发。
+过期缓存会保留给兜底使用，但没有容量上限和主动清理策略，会一直留到标签页关闭。
+公交请求没有加入重试，保持 12 秒超时后直接走演示线路；加油站仍使用自己的重试逻辑，网络层没有完全统一。
+未做 Service Worker / 瓦片离线缓存，断网时地图底图仍无法显示。
+第五步只做了本地验证，尚未提交 git，也未部署到 Qoder Sites。
+整体遗留的产品限制仍在：栅格瓦片无法隐藏 POI、自驾途经加油站不重新规划路线、步行没有真实道路路由。

@@ -1,0 +1,115 @@
+{
+  "scheme": "dark",
+  "motion": "no-preference",
+  "viewport": "430x932",
+  "flow": {
+    "start": "clicked@215,534",
+    "submit": "clicked@215,879",
+    "rows": "svg,svg,svg",
+    "rowStyle": "iconBox=grid/28px arrowColor=rgb(152, 152, 157) dividerLeft=62px dividerBg=rgb(44, 44, 46)",
+    "pickDrive": "clicked@215,759",
+    "summary": {
+      "label": "确认",
+      "text": "目的地 / 北京西站 / 方式 / 自驾 / 下一步会请求定位权限；拒绝也没关系，可以手动设置起点。 / 打开地图 / "
+    },
+    "routeWait": 0,
+    "routeTag": "OSRM · 自驾 · 3 条方案",
+    "optionActive": "bg=rgb(245, 245, 247) color=rgb(0, 0, 0) border=rgb(245, 245, 247)",
+    "gradeTexts": "安全 68 · 中:rgb(0, 0, 0) | 安全 92 · 优:rgb(48, 209, 88) | 安全 68 · 中:rgb(255, 69, 58)",
+    "destMarker": "border=rgb(245, 245, 247)",
+    "gasOpen": "clicked@361,347",
+    "gasIcon": "svg=size-4 16px text=附近加油站",
+    "gasRows": 0,
+    "gasPick": "NOT_VISIBLE",
+    "gasSelected": "MISSING",
+    "gasChip": "hidden=true bg=rgb(245, 245, 247) color=rgb(0, 0, 0) svg=yes",
+    "weather": "hidden=true text=       天气                —         正在获取…    ",
+    "transitWait": 0,
+    "transit": {
+      "tag": "离线演示",
+      "summary": "约 41 分钟 · 步行 1.7 km",
+      "board": "演示上车站",
+      "remindHidden": false
+    },
+    "alertClick": "clicked@220,867",
+    "banner": "hidden=false bg=rgb(245, 245, 247) color=rgb(0, 0, 0)",
+    "bannerHiddenAfter11s": true,
+    "originLink": "clicked@56,670",
+    "originForm": "hidden=false btnBg=rgb(245, 245, 247) btnColor=rgb(0, 0, 0) svg=size-5 caret=rgb(245, 245, 247)"
+  },
+  "consoleErrors": [],
+  "externalHosts": [
+    "photon.komoot.io",
+    "tile.openstreetmap.de",
+    "router.project-osrm.org",
+    "api.open-meteo.com",
+    "overpass-api.de"
+  ],
+  "audit": {
+    "emojiHits": [],
+    "blueHits": [],
+    "iconCount": 45,
+    "strokes": [
+      "size-6|24x24|sw1.5|rgb(0, 0, 0)|kids1",
+      "size-5|20x20|sw2|rgb(0, 0, 0)|kids1",
+      "size-5|0x0|sw2|rgb(152, 152, 157)|kids2",
+      "size-5|0x0|sw2|rgb(0, 0, 0)|kids1",
+      "size-6|0x0|sw1.5|rgb(245, 245, 247)|kids7",
+      "size-5|0x0|sw2|rgb(152, 152, 157)|kids1",
+      "size-6|0x0|sw1.5|rgb(245, 245, 247)|kids4",
+      "size-5|20x20|sw2|rgb(152, 152, 157)|kids2",
+      "size-6|24x24|sw1.5|rgb(245, 245, 247)|kids7",
+      "size-5|20x20|sw2|rgb(152, 152, 157)|kids1",
+      "size-6|24x24|sw1.5|rgb(245, 245, 247)|kids4",
+      "leaflet-zoom-animated|516x1118|swnull|none|kids1",
+      "size-5|20x20|sw2|rgb(245, 245, 247)|kids1",
+      "size-5|20x20|sw1.5|rgb(245, 245, 247)|kids2",
+      "size-4|16x16|sw1.5|rgb(245, 245, 247)|kids4",
+      "size-4|0x0|sw1.5|rgb(0, 0, 0)|kids4",
+      "size-4|0x0|sw1.5|rgb(245, 245, 247)|kids4"
+    ],
+    "notDrawn": [
+      "size-5",
+      "size-5",
+      "size-6",
+      "size-5",
+      "size-6",
+      "size-5",
+      "size-6",
+      "size-5",
+      "size-5",
+      "size-6",
+      "size-5",
+      "size-6",
+      "size-5",
+      "size-6",
+      "size-5",
+      "size-5",
+      "size-5",
+      "size-5",
+      "size-4",
+      "size-5",
+      "size-4",
+      "size-4",
+      "size-5"
+    ],
+    "viewBoxes": [
+      "0 0 24 24",
+      "-43 -93 516 1118"
+    ],
+    "fills": [
+      "none",
+      "rgb(0, 0, 0)"
+    ],
+    "currentColorAll": 0
+  },
+  "tokens": {
+    "accent": "(empty)",
+    "accentSoft": "#1c1c1e",
+    "grades": "--z-grade-high=#30d158 --z-grade-mid=#ff9f0a --z-grade-low=#ff453a"
+  },
+  "primaryButtons": {
+    "home": "bg=rgb(245, 245, 247) color=rgb(0, 0, 0) image=none radius=999px",
+    "map": "MISSING"
+  }
+}

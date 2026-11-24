@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>ZenMap · 地图</title>
+  <meta name="description" content="ZenMap 导航地图页。" />
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><polygon points='3 11 22 2 13 21 11 13 3 11' fill='%231d1d1f' stroke='%23ffffff' stroke-width='1.2'/></svg>" />
+
+  <script src="./assets/vendor/tailwind-browser.js"></script>
+  <link rel="stylesheet" href="./assets/vendor/leaflet.css" />
+  <link rel="stylesheet" href="./assets/css/zen.css" />
+
+  <style type="text/tailwindcss">
+    @theme {
+      --color-zen-surface: var(--z-surface);
+      --color-zen-ink: var(--z-ink);
+      --color-zen-line: var(--z-line);
+      --color-zen-ghost: var(--z-ghost);
+      --color-zen-fill: var(--z-fill);
+    }
+  </style>
+</head>
+<body class="overflow-hidden bg-zen-surface text-zen-ink antialiased">
+
+  <div id="map" class="zen-map absolute inset-0 z-0"></div>
+
+  <div id="alert-banner" hidden role="alert" aria-live="assertive"
+    class="fixed inset-x-3 top-[calc(env(safe-area-inset-top)+5rem)] z-30 border border-zen-ink bg-zen-ink px-4 py-3 text-zen-surface">
+    <p id="alert-title" class="text-base font-semibold tracking-tight">即将到站</p>
+    <p id="alert-sub" class="mt-0.5 text-xs opacity-80">请准备下车</p>
+  </div>
+
+  <header class="zen-topbar fixed inset-x-0 top-0 z-20 pt-[env(safe-area-inset-top)]">
+    <div class="flex min-w-0 items-center gap-2 px-3 py-2 sm:px-4">
+      <a href="./index.html" aria-label="返回首页"
+        class="zen-icon shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zen-ink">
+        <span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="size-5"><path d="m15 18-6-6 6-6" /></svg></span>
+      </a>
+
+      <div class="min-w-0 flex-1 px-1">
+        <p id="mode-label" class="zen-label">导航</p>
+        <p id="dest-label" class="mt-1 truncate text-base font-semibold tracking-[-0.02em]">目的地</p>
+        <p id="dest-note" hidden class="mt-1 text-[0.6875rem] text-zen-ghost">地图上暂未找到该地点</p>
+      </div>
+
+      <button id="locate-btn" type="button" aria-label="定位到我的位置"
+        class="zen-icon shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zen-ink">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="size-5">
+          <circle cx="12" cy="12" r="3.2" />
+          <path d="M12 2.5v3.2M12 18.3v3.2M2.5 12h3.2M18.3 12h3.2" />
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <button id="gas-btn" type="button" hidden style="bottom: calc(var(--z-sheet, 0px) + 0.75rem)"
+    class="zen-pill fixed right-3 z-20 text-xs tracking-[-0.01em] text-zen-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zen-ink">
+    <span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="size-4"><line x1="3" x2="15" y1="22" y2="22" /><line x1="4" x2="14" y1="9" y2="9" /><path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18" /><path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2 2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 5" /></svg></span><span>附近加油站</span>
+  </button>
+
+  <button id="gas-chip" type="button" hidden style="bottom: calc(var(--z-sheet, 0px) + 0.75rem)"
+    class="zen-pill zen-pill-solid fixed right-3 z-20 text-xs tracking-[-0.01em] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zen-ink">
+    <span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="size-4"><line x1="3" x2="15" y1="22" y2="22" /><line x1="4" x2="14" y1="9" y2="9" /><path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18" /><path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2 2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 5" /></svg></span><span>途经 <span id="gas-chip-name"></span></span><span class="opacity-60">更换</span>
+  </button>
+
+  <div id="gas-panel" hidden style="bottom: calc(var(--z-sheet, 0px) + 4rem); max-height: calc(100dvh - var(--z-sheet, 0px) - 11rem); overflow-y: auto"
+    class="zen-glass fixed inset-x-3 z-20 border border-zen-line p-4 sm:left-auto sm:w-96">
+    <div class="flex items-center justify-between gap-3">
+      <p class="zen-label">附近加油站</p>
+      <div class="flex items-center gap-3">
+        <button id="gas-refresh" type="button"
+          class="text-[0.6875rem] text-zen-ghost transition-colors hover:text-zen-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zen-ink">刷新</button>
+        <button id="gas-close" type="button"
+          class="text-[0.6875rem] text-zen-ghost transition-colors hover:text-zen-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zen-ink">收起</button>
+      </div>
+    </div>
+    <p id="gas-status" class="mt-1.5 text-xs leading-5 text-zen-ghost">正在查找…</p>
+    <p id="gas-waypoint" hidden class="mt-1.5 text-xs leading-5 text-zen-ink">途经 <span id="gas-waypoint-name" class="font-medium"></span><button
+        id="gas-clear" type="button"
+        class="ml-1 text-xs text-zen-ghost underline underline-offset-4 transition-colors hover:text-zen-ink focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-zen-ink">取消</button></p>
+    <ul id="gas-list" class="mt-2 divide-y divide-zen-line border-t border-zen-line"></ul>
+  </div>
+
+  <section id="sheet" class="zen-glass fixed inset-x-0 bottom-0 z-20 px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4">
+    <div class="flex items-start justify-between gap-4">
+      <div class="min-w-0">
+        <p class="zen-label">起点</p>
+        <p class="mt-1.5 flex items-center gap-2 text-base font-semibold tracking-[-0.02em]">
+          <span id="status-dot" hidden></span>
+          <span id="status-text" class="truncate">正在获取位置…</span>
+        </p>
+        <p id="status-sub" class="mt-1.5 text-xs leading-5 text-zen-ghost">首次使用请允许位置权限</p>
+      </div>
+      <button id="retry-btn" type="button" hidden
+        class="zen-mini shrink-0 text-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zen-ink">重试定位</button>
+    </div>
+
+    <p id="offline-note" hidden class="mt-2 text-xs leading-5 text-zen-ghost">网络已断开 · 正在使用本地缓存</p>
+
+    <button id="manual-link" type="button"
+      class="mt-3 text-xs text-zen-ghost underline-offset-4 transition-colors hover:text-zen-ink hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-zen-ink">手动设置起点</button>
+
+    <form id="origin-form" class="mt-3 items-center gap-2" hidden>
+      <label for="origin-input" class="sr-only">手动输入起点</label>
+      <input id="origin-input" type="text" enterkeyhint="go" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="60"
+        placeholder="输入起点，如：人民广场"
+        class="min-w-0 flex-1 bg-transparent pb-2 text-base tracking-[-0.01em] caret-zen-ink outline-none placeholder:text-zen-ghost" />
+      <button type="submit" aria-label="确认起点"
+        class="zen-icon-solid shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zen-ink"><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="size-5"><path d="m9 18 6-6-6-6" /></svg></span></button>
+    </form>
+    <p id="origin-error" hidden class="mt-2 text-xs text-zen-ghost">没找到这个地点，换个说法试试</p>
+
+    <div id="weather-panel" hidden class="mt-4 border-t border-zen-line pt-4">
+      <p class="zen-label">天气</p>
+      <p class="mt-1.5 flex items-baseline gap-2">
+        <span id="weather-temp" class="text-[1.75rem] font-semibold leading-none tracking-[-0.02em]">—</span>
+        <span id="weather-text" class="text-sm text-zen-ghost">正在获取…</span>
+      </p>
+      <p id="weather-rain" class="mt-1.5 text-xs leading-5 text-zen-ghost"></p>
+    </div>
+
+    <div id="route-panel" hidden class="mt-4 border-t border-zen-line pt-4">
+      <div class="flex items-center justify-between gap-3">
+        <p id="route-title" class="zen-label">公交路线</p>
+        <span id="route-tag" class="zen-badge"></span>
+      </div>
+      <p id="route-summary" class="mt-2">正在规划路线…</p>
+      <p id="route-note" hidden class="mt-1.5 text-xs leading-5 text-zen-ghost"></p>
+      <div id="route-options" hidden class="mt-3 flex flex-wrap gap-2"></div>
+      <div id="route-safety" hidden class="mt-3 border-t border-zen-line pt-3"></div>
+      <div id="route-stops" class="mt-2.5 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs leading-5 text-zen-ghost">
+        <p class="truncate">上车 <span id="board-name" class="text-zen-ink">—</span></p>
+        <p class="truncate">下车 <span id="alight-name" class="text-zen-ink">—</span></p>
+      </div>
+      <div id="route-remind" class="mt-3.5 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <label for="threshold" class="text-xs text-zen-ghost">到站提醒</label>
+        <select id="threshold"
+          class="zen-mini text-xs text-zen-ink outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zen-ink">
+          <option value="300">300 m</option>
+          <option value="500" selected>500 m</option>
+          <option value="800">800 m</option>
+          <option value="1000">1 km</option>
+        </select>
+        <button id="test-alert" type="button"
+          class="zen-mini text-xs text-zen-ghost focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zen-ink">试一下提醒</button>
+      </div>
+      <p id="remind-status" class="mt-3 text-xs leading-5 text-zen-ghost">等待定位…</p>
+    </div>
+  </section>
+
+  <script src="./assets/vendor/leaflet.js" defer></script>
+  <script src="./assets/js/config.js" defer></script>
+  <script src="./assets/js/store.js" defer></script>
+  <script src="./assets/js/net.js" defer></script>
+  <script src="./assets/js/coord.js" defer></script>
+  <script src="./assets/js/remind.js" defer></script>
+  <script src="./assets/js/transit.js" defer></script>
+  <script src="./assets/js/drive.js" defer></script>
+  <script src="./assets/js/safety.js" defer></script>
+  <script src="./assets/js/gas.js" defer></script>
+  <script src="./assets/js/weather.js" defer></script>
+  <script src="./assets/js/map.js" defer></script>
+</body>
+</html>
