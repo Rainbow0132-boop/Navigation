@@ -1,3 +1,3 @@
 window.ZENMAP_CONFIG = {
-  amapKey: '',
+  amapKey: '14f687ca54fea940c59cfb4bfde7e89b',
 };

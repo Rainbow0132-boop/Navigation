@@ -1,10 +1,28 @@
 const OSRM_DRIVING_URL = 'https://router.project-osrm.org/route/v1/driving';
+const OSRM_FOOT_URL = 'https://routing.openstreetmap.de/routed-foot/route/v1/foot';
 const DRIVE_ESTIMATE_SPEED = (40 * 1000) / 3600;
+const WALK_ESTIMATE_SPEED = 1.2;
 const DRIVE_ROUTE_NAMES = ['方案一', '方案二', '方案三'];
 const DRIVE_ROUTE_LIMIT = 3;
 const DRIVE_VARIANT_BENDS = [0, 0.12, -0.12];
 
-function normalizeDriveRoute(raw, index) {
+function osrmRouteUrl(baseUrl, origin, destination, alternatives) {
+  const via = `${origin.lng.toFixed(6)},${origin.lat.toFixed(6)};${destination.lng.toFixed(6)},${destination.lat.toFixed(6)}`;
+  return `${baseUrl}/${via}?overview=full&geometries=geojson${alternatives ? '&alternatives=true' : ''}&steps=false`;
+}
+
+async function fetchOsrmRoutes(url, { timeout, fallbackSpeed, retries = 1 }) {
+  const data = await ZenNet.fetchJson(url, { timeout, retries });
+
+  if (data?.code !== 'Ok') throw new Error('osrm-code');
+
+  const routes = (data.routes ?? []).map((raw) => normalizeOsrmRoute(raw, fallbackSpeed)).filter(Boolean);
+  if (!routes.length) throw new Error('osrm-empty');
+
+  return routes;
+}
+
+function normalizeOsrmRoute(raw, fallbackSpeed) {
   const coordinates = raw?.geometry?.coordinates;
   if (!Array.isArray(coordinates) || coordinates.length < 2) return null;
 
@@ -13,17 +31,17 @@ function normalizeDriveRoute(raw, index) {
   const seconds = Number(raw.duration);
 
   return {
-    id: DRIVE_ROUTE_NAMES[index] ?? `方案${index + 1}`,
+    id: '',
     source: 'osrm',
     legs: [{ walking: false, points }],
     points,
     total,
-    duration: Number.isFinite(seconds) && seconds > 0 ? seconds : total / DRIVE_ESTIMATE_SPEED,
+    duration: Number.isFinite(seconds) && seconds > 0 ? seconds : total / fallbackSpeed,
     estimated: false,
   };
 }
 
-function buildDriveEstimate(origin, destination, bend = 0) {
+function buildBendPoints(origin, destination, bend) {
   const steps = 32;
   const dLat = destination.lat - origin.lat;
   const dLng = destination.lng - origin.lng;
@@ -38,6 +56,11 @@ function buildDriveEstimate(origin, destination, bend = 0) {
     });
   }
 
+  return points;
+}
+
+function buildDriveEstimate(origin, destination, bend = 0) {
+  const points = buildBendPoints(origin, destination, bend);
   const { total } = buildRouteMetrics(points);
   return {
     id: '',
@@ -62,14 +85,34 @@ function nameDriveRoutes(routes) {
 }
 
 async function fetchDriveRoutes({ origin, destination }) {
-  const via = `${origin.lng.toFixed(6)},${origin.lat.toFixed(6)};${destination.lng.toFixed(6)},${destination.lat.toFixed(6)}`;
-  const url = `${OSRM_DRIVING_URL}/${via}?overview=full&geometries=geojson&alternatives=true&steps=false`;
-  const data = await ZenNet.fetchJson(url, { timeout: 12000, retries: 1 });
+  const routes = await fetchOsrmRoutes(osrmRouteUrl(OSRM_DRIVING_URL, origin, destination, true), {
+    timeout: 12000,
+    fallbackSpeed: DRIVE_ESTIMATE_SPEED,
+  });
+  const picked = routes.slice(0, DRIVE_ROUTE_LIMIT);
 
-  if (data?.code !== 'Ok') throw new Error('drive-http');
+  return nameDriveRoutes([...picked, ...buildDriveEstimates(origin, destination, DRIVE_ROUTE_LIMIT - picked.length)]);
+}
 
-  const routes = (data.routes ?? []).map(normalizeDriveRoute).filter(Boolean).slice(0, DRIVE_ROUTE_LIMIT);
-  if (!routes.length) throw new Error('drive-empty');
+async function fetchWalkRoute({ origin, destination }) {
+  const [route] = await fetchOsrmRoutes(osrmRouteUrl(OSRM_FOOT_URL, origin, destination, false), {
+    timeout: 10000,
+    fallbackSpeed: WALK_ESTIMATE_SPEED,
+  });
+  return { ...route, id: '步行路线' };
+}
 
-  return nameDriveRoutes([...routes, ...buildDriveEstimates(origin, destination, DRIVE_ROUTE_LIMIT - routes.length)]);
+function buildWalkEstimate(origin, destination) {
+  const points = buildBendPoints(origin, destination, 0);
+  const { total } = buildRouteMetrics(points);
+
+  return {
+    id: '步行路线',
+    source: 'estimate',
+    legs: [{ walking: false, points }],
+    points,
+    total,
+    duration: total / WALK_ESTIMATE_SPEED,
+    estimated: true,
+  };
 }

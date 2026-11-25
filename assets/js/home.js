@@ -222,3 +222,11 @@ function syncNetHint() {
 window.addEventListener('online', syncNetHint);
 window.addEventListener('offline', syncNetHint);
 syncNetHint();
+
+const presetDest = new URLSearchParams(window.location.search).get('dest');
+if (presetDest) {
+  trip = { destination: presetDest, mode: '' };
+  writeTrip();
+  openPanel();
+  setStep('ask');
+}

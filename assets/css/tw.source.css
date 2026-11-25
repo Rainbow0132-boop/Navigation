@@ -1,0 +1,16 @@
+@import "tailwindcss" source(none);
+
+@source "../../index.html";
+@source "../../map.html";
+@source "../js";
+
+@theme {
+  --color-zen-surface: var(--z-surface);
+  --color-zen-ink: var(--z-ink);
+  --color-zen-line: var(--z-line);
+  --color-zen-ghost: var(--z-ghost);
+  --color-zen-fill: var(--z-fill);
+}
+
+@source inline("opacity-40");
+@source inline("{block,min-w-0,truncate,shrink-0,mt-0.5,mt-1,px-1,py-2.5,gap-3,w-full,flex,items-center,justify-between,text-left,text-[0.6875rem],text-sm,text-xs,leading-5,font-medium,tracking-[-0.01em],tracking-[-0.02em],tracking-tight,text-zen-ghost}");

@@ -1,4 +1,7 @@
 const AMAP_TRANSIT_URL = 'https://restapi.amap.com/v3/direction/transit/integrated';
+const TRANSIT_PLAN_LIMIT = 3;
+const TRANSIT_PLAN_NAMES = ['方案一', '方案二', '方案三'];
+const TRANSIT_METRO_TYPE = /地铁|磁悬浮|railway.*subway/i;
 
 function parseAmapPolyline(value) {
   if (typeof value !== 'string' || value === '') return [];
@@ -13,12 +16,58 @@ function parseAmapPolyline(value) {
     .filter(Boolean);
 }
 
-function parseAmapStop(stop) {
-  if (!stop || typeof stop.location !== 'string') return null;
-  const [lng, lat] = stop.location.split(',').map(Number);
+function parseAmapCoord(value) {
+  if (typeof value !== 'string') return null;
+  const [lngRaw, latRaw] = value.trim().split(/[,;\s]+/);
+  const lng = Number(lngRaw);
+  const lat = Number(latRaw);
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
   const point = gcj02ToWgs84(lat, lng);
-  return { name: stop.name || '', lat: point.lat, lng: point.lng };
+  return { lat: point.lat, lng: point.lng };
+}
+
+function parseAmapStop(stop) {
+  const point = parseAmapCoord(stop?.location);
+  if (!point) return null;
+  return { name: typeof stop.name === 'string' ? stop.name : '', lat: point.lat, lng: point.lng };
+}
+
+function amapText(value) {
+  return typeof value === 'string' ? value : '';
+}
+
+function amapNumber(value) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : 0;
+}
+
+function stripLineParen(name) {
+  return amapText(name).replace(/[（(][^）)]*[)）]/g, '').trim();
+}
+
+function parseAmapSteps(steps) {
+  const list = [];
+  for (const step of steps || []) {
+    const text = amapText(step.instruction);
+    const points = parseAmapPolyline(step.polyline);
+    if (!text) continue;
+    list.push({ text, road: amapText(step.road_name), distance: amapNumber(step.distance), point: points[points.length - 1] || null });
+  }
+  return list;
+}
+
+function transitLegLabel(leg) {
+  if (leg.kind === 'taxi') return '打车';
+  return leg.label || leg.name;
+}
+
+function transitModeTags(legs) {
+  const tags = [];
+  for (const leg of legs) {
+    const tag = leg.walking ? '步行' : leg.kind === 'railway' ? '火车' : leg.kind === 'taxi' ? '打车' : leg.metro ? '地铁' : '公交';
+    if (!tags.includes(tag)) tags.push(tag);
+  }
+  return tags;
 }
 
 function toAmapCoord(point) {
@@ -26,14 +75,14 @@ function toAmapCoord(point) {
   return `${gcj.lng.toFixed(6)},${gcj.lat.toFixed(6)}`;
 }
 
-async function fetchTransitRoute({ key, origin, destination, city1, city2 }) {
+async function fetchTransitPlans({ key, origin, destination, city1, city2, destinationName = '', strategy = '0' }) {
   const url = new URL(AMAP_TRANSIT_URL);
   url.searchParams.set('key', key);
   url.searchParams.set('origin', toAmapCoord(origin));
   url.searchParams.set('destination', toAmapCoord(destination));
   url.searchParams.set('city', city1);
   if (city2 && city2 !== city1) url.searchParams.set('cityd', city2);
-  url.searchParams.set('strategy', '0');
+  url.searchParams.set('strategy', strategy);
   url.searchParams.set('output', 'json');
 
   const response = await fetch(url, { signal: ZenNet.timeoutSignal(12000) });
@@ -42,20 +91,50 @@ async function fetchTransitRoute({ key, origin, destination, city1, city2 }) {
   const data = await response.json();
   if (data.status !== '1') throw new Error(`transit-status-${data.info || 'error'}`);
 
-  const transit = data.route?.transits?.[0];
-  if (!transit) throw new Error('transit-empty');
-  return normalizeTransit(transit);
+  const transits = (data.route?.transits || []).filter((transit) => Array.isArray(transit.segments) && transit.segments.length);
+  const plans = transits.map((transit, index) => normalizeTransit(transit, destinationName, index));
+  if (!plans.length) throw new Error('transit-empty');
+
+  const preferred = strategy === '5' ? plans.filter((plan) => !plan.usesMetro) : plans;
+  const fallback = strategy === '5' && !preferred.length;
+  const picked = pickTransitPlans(preferred.length ? preferred : plans);
+  return picked.map((plan, index) => ({
+    ...plan,
+    id: TRANSIT_PLAN_NAMES[index] || `方案${index + 1}`,
+    noMetroFallback: fallback,
+  }));
 }
 
-function normalizeTransit(transit) {
+function pickTransitPlans(plans, limit = TRANSIT_PLAN_LIMIT) {
+  const picked = [plans[0]];
+  const opposite = plans.find((plan) => plan.usesMetro !== plans[0].usesMetro);
+  if (opposite) picked.push(opposite);
+  for (const plan of plans) {
+    if (picked.length >= limit) break;
+    if (!picked.includes(plan)) picked.push(plan);
+  }
+  return picked.slice(0, limit);
+}
+
+function normalizeTransit(transit, destinationName = '', index = 0) {
   const legs = [];
   let boarding = null;
   let alighting = null;
 
   for (const segment of transit.segments || []) {
     if (segment.walking?.steps?.length) {
+      const steps = parseAmapSteps(segment.walking.steps);
       const points = segment.walking.steps.flatMap((step) => parseAmapPolyline(step.polyline));
-      if (points.length > 1) legs.push({ walking: true, points });
+      if (points.length > 1) {
+        legs.push({
+          walking: true,
+          kind: 'walking',
+          points,
+          steps,
+          distance: amapNumber(segment.walking.distance) || steps.reduce((sum, step) => sum + step.distance, 0),
+          name: '步行',
+        });
+      }
     }
 
     const line = segment.bus?.buslines?.[0];
@@ -64,27 +143,84 @@ function normalizeTransit(transit) {
       const to = parseAmapStop(line.arrival_stop);
       let points = parseAmapPolyline(line.polyline);
       if (points.length < 2 && from && to) points = [from, to];
-      if (points.length > 1) legs.push({ walking: false, points, name: line.name || '' });
+      const label = stripLineParen(line.name);
+      if (points.length > 1) legs.push({
+        walking: false,
+        kind: 'bus',
+        points,
+        name: line.name || '',
+        label,
+        metro: TRANSIT_METRO_TYPE.test(`${line.type || ''}${label}`),
+        viaNum: amapNumber(line.via_num),
+        fromName: from?.name || '',
+        toName: to?.name || '',
+        distance: amapNumber(line.distance),
+      });
       if (!boarding && from) boarding = from;
       if (to) alighting = to;
     }
 
     const railway = segment.railway;
-    if (railway) {
+    if (railway && (railway.name || railway.trip)) {
       const from = parseAmapStop(railway.departure_stop);
       const to = parseAmapStop(railway.arrival_stop);
-      if (from && to) legs.push({ walking: false, points: [from, to], name: railway.name || railway.trip || '' });
-      if (!boarding && from) boarding = from;
-      if (to) alighting = to;
+      if (from && to) {
+        legs.push({
+          walking: false,
+          kind: 'railway',
+          points: [from, to],
+          name: railway.trip || railway.name || '火车',
+          trip: railway.trip || '',
+          label: stripLineParen(railway.name || railway.trip) || '火车',
+          fromName: from.name,
+          toName: to.name,
+          distance: amapNumber(railway.distance),
+          fromTime: amapText(railway.departure_stop?.time),
+          toTime: amapText(railway.arrival_stop?.time),
+          toNextDay: railway.arrival_stop?.end === '1',
+        });
+        if (!boarding) boarding = from;
+        alighting = to;
+      }
+    }
+
+    const taxi = segment.taxi;
+    if (taxi) {
+      const from = parseAmapCoord(taxi.origin);
+      const to = parseAmapCoord(taxi.destination);
+      if (from && to) {
+        const label = amapText(taxi.tname) || destinationName;
+        legs.push({
+          walking: false,
+          kind: 'taxi',
+          points: [from, to],
+          name: '打车',
+          label: '打车',
+          distance: amapNumber(taxi.distance),
+          fromName: amapText(taxi.sname),
+          toName: label,
+        });
+        if (!boarding) boarding = from;
+        alighting = { name: label, lat: to.lat, lng: to.lng };
+      }
     }
   }
 
   if (!legs.length || !boarding || !alighting) throw new Error('transit-incomplete');
 
+  for (const [legIndex, leg] of legs.entries()) {
+    if (!leg.walking) continue;
+    const next = legs[legIndex + 1];
+    leg.to = next ? next.fromName || next.toName || '' : destinationName || '';
+  }
+
   const points = legs.flatMap((leg) => leg.points);
   const { cum, total } = buildRouteMetrics(points);
+  const rides = legs.filter((leg) => !leg.walking);
+  const modeTags = transitModeTags(legs);
 
   return {
+    id: TRANSIT_PLAN_NAMES[index] || `方案${index + 1}`,
     source: 'amap',
     legs,
     points,
@@ -92,9 +228,14 @@ function normalizeTransit(transit) {
     total,
     boarding: { ...boarding, along: alongOfPoint(points, cum, boarding) },
     alighting: { ...alighting, along: alongOfPoint(points, cum, alighting) },
-    duration: Number(transit.duration) || 0,
-    walkingDistance: Number(transit.walking_distance) || 0,
+    duration: amapNumber(transit.duration),
+    walkingDistance: amapNumber(transit.walking_distance),
+    totalDistance: amapNumber(transit.distance),
     cost: transit.cost != null && transit.cost !== '' ? Number(transit.cost) : null,
+    title: rides.map(transitLegLabel).filter(Boolean).join('+') || '步行',
+    transferCount: Math.max(0, rides.length - 1),
+    usesMetro: modeTags.includes('地铁'),
+    modeTags,
     demo: false,
   };
 }
@@ -126,14 +267,15 @@ function buildDemoRoute(origin, destination) {
   const walkStart = points.slice(0, board.index + 1);
   const ride = points.slice(board.index, alight.index + 1);
   const walkEnd = points.slice(alight.index);
-  if (walkStart.length > 1) legs.push({ walking: true, points: walkStart });
-  if (ride.length > 1) legs.push({ walking: false, points: ride, name: '演示线路' });
-  if (walkEnd.length > 1) legs.push({ walking: true, points: walkEnd });
+  if (walkStart.length > 1) legs.push({ walking: true, kind: 'walking', points: walkStart, steps: [], name: '步行' });
+  if (ride.length > 1) legs.push({ walking: false, kind: 'bus', points: ride, name: '演示线路', label: '演示线路', viaNum: 3, fromName: '演示上车站', toName: '演示下车站' });
+  if (walkEnd.length > 1) legs.push({ walking: true, kind: 'walking', points: walkEnd, steps: [], name: '步行' });
 
   const walkingDistance = boardAlong + (total - alightAlong);
   const duration = walkingDistance / 1.2 + Math.max(0, alightAlong - boardAlong) / 7;
 
   return {
+    id: TRANSIT_PLAN_NAMES[0],
     source: 'demo',
     legs,
     points,
@@ -143,7 +285,12 @@ function buildDemoRoute(origin, destination) {
     alighting: { name: '演示下车站', lat: alight.point.lat, lng: alight.point.lng, along: alightAlong },
     duration,
     walkingDistance,
+    totalDistance: total,
     cost: null,
+    title: '演示线路',
+    transferCount: 0,
+    usesMetro: false,
+    modeTags: ['步行', '公交'],
     demo: true,
   };
 }

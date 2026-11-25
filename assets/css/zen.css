@@ -356,6 +356,10 @@ input:-webkit-autofill {
 #sheet {
   border-radius: var(--z-radius) var(--z-radius) 0 0;
   box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.08);
+  max-height: 52vh;
+  max-height: 52dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -524,8 +528,37 @@ input:-webkit-autofill {
 #route-stops[hidden],
 #route-remind[hidden],
 #route-options[hidden],
+#route-strategy[hidden],
 #route-safety[hidden] {
   display: none;
+}
+
+#route-strategy .zen-mini[aria-pressed="true"] {
+  background: var(--z-ink);
+  color: var(--z-surface);
+}
+
+#nav-bar[hidden],
+#nav-exit[hidden],
+#nav-offroute[hidden],
+#start-nav-btn[hidden] {
+  display: none;
+}
+
+body[data-nav="on"] #sheet,
+body[data-nav="on"] #gas-btn,
+body[data-nav="on"] #gas-chip,
+body[data-nav="on"] #gas-panel,
+body[data-nav="on"] #dest-candidates {
+  display: none;
+}
+
+body[data-nav="on"] #alert-banner {
+  top: calc(env(safe-area-inset-top) + var(--z-topbar, 5rem) + 9.5rem);
+}
+
+#route-strategy .zen-mini:disabled {
+  opacity: 0.55;
 }
 
 #route-options .zen-option {
@@ -555,6 +588,30 @@ input:-webkit-autofill {
   opacity: 0.8;
 }
 
+#dest-candidates .zen-option {
+  border-radius: var(--z-radius-btn);
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
+#dest-candidates .zen-option:hover {
+  background: var(--z-fill);
+}
+
+#dest-candidates .zen-option-active {
+  border-color: var(--z-ink);
+  background: var(--z-ink);
+  color: var(--z-surface);
+}
+
+#dest-candidates .zen-option-active:hover {
+  background: var(--z-ink);
+}
+
+#dest-candidates .zen-option-active .zen-cand-sub {
+  color: var(--z-surface);
+  opacity: 0.75;
+}
+
 #route-safety > p:first-child {
   display: inline-flex;
   align-items: baseline;
@@ -575,6 +632,27 @@ input:-webkit-autofill {
   font-variant-numeric: tabular-nums;
 }
 
+#map-skeleton {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + var(--z-topbar, 5rem) + 1rem);
+  left: 50%;
+  z-index: 10;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  padding: 0.4375rem 0.875rem;
+  background: var(--z-surface-glass);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  box-shadow: var(--z-shadow-sm);
+  color: var(--z-ghost);
+  font-size: 0.8125rem;
+  pointer-events: none;
+}
+
+#map-skeleton[hidden] {
+  display: none;
+}
+
 .zen-map .leaflet-container {
   background: var(--z-surface);
   font-family: inherit;
@@ -583,6 +661,12 @@ input:-webkit-autofill {
 
 .zen-map .leaflet-tile-pane {
   filter: grayscale(1) contrast(1.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  .zen-map .leaflet-tile-pane {
+    filter: invert(1) grayscale(1) contrast(1.06);
+  }
 }
 
 .zen-map .leaflet-control-attribution {

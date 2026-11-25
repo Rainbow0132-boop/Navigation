@@ -2,9 +2,19 @@ const $ = (selector) => document.querySelector(selector);
 
 const els = {
   map: $('#map'),
+  mapSkeleton: $('#map-skeleton'),
   mode: $('#mode-label'),
   dest: $('#dest-label'),
   destNote: $('#dest-note'),
+  destNoteText: $('#dest-note-text'),
+  destNoteWarn: $('#dest-note-warn'),
+  destSwitch: $('#dest-switch'),
+  destCandidatesPanel: $('#dest-candidates'),
+  destCandidatesTitle: $('#dest-candidates-title'),
+  destCandidateList: $('#dest-candidate-list'),
+  destCandidatesClose: $('#dest-candidates-close'),
+  destRetype: $('#dest-retype'),
+  topbar: $('.zen-topbar'),
   locate: $('#locate-btn'),
   sheet: $('#sheet'),
   dot: $('#status-dot'),
@@ -25,14 +35,29 @@ const els = {
   routeSummary: $('#route-summary'),
   routeNote: $('#route-note'),
   routeOptions: $('#route-options'),
+  routeStrategy: $('#route-strategy'),
   routeSafety: $('#route-safety'),
+  safetyDisclaimer: $('#safety-disclaimer'),
   routeStops: $('#route-stops'),
   routeRemind: $('#route-remind'),
   boardName: $('#board-name'),
   alightName: $('#alight-name'),
+  alightExtra: $('#alight-extra'),
+  transitCross: $('#transit-cross'),
+  transitCrossText: $('#transit-cross-text'),
+  transitCrossToggle: $('#transit-cross-toggle'),
+  transitLegs: $('#transit-legs'),
   threshold: $('#threshold'),
   testAlert: $('#test-alert'),
   remindStatus: $('#remind-status'),
+  startNav: $('#start-nav-btn'),
+  navBar: $('#nav-bar'),
+  navRemain: $('#nav-remain'),
+  navEta: $('#nav-eta'),
+  navLeg: $('#nav-leg'),
+  navOffRoute: $('#nav-offroute'),
+  navReroute: $('#nav-reroute'),
+  navExit: $('#nav-exit'),
   gasBtn: $('#gas-btn'),
   gasChip: $('#gas-chip'),
   gasChipName: $('#gas-chip-name'),
@@ -48,16 +73,24 @@ const els = {
   weatherTemp: $('#weather-temp'),
   weatherText: $('#weather-text'),
   weatherRain: $('#weather-rain'),
+  weatherDest: $('#weather-dest'),
+  weatherDestTemp: $('#weather-dest-temp'),
+  weatherDestText: $('#weather-dest-text'),
 };
 
 const TRIP_KEY = 'zenmap:trip';
 const THRESHOLD_KEY = 'zenmap:threshold';
 const GEO_TTL = 7 * 24 * 60 * 60 * 1000;
 const ROUTE_TTL = 30 * 60 * 1000;
-const FUEL_TTL = 10 * 60 * 1000;
+const FUEL_TTL = 30 * 60 * 1000;
 const WEATHER_TTL = 20 * 60 * 1000;
 const MODE_LABEL = { transit: '公交地铁', drive: '自驾', walk: '步行' };
 const MODE_TITLE = { transit: '公交路线', drive: '驾车路线', walk: '步行路线' };
+const TRANSIT_STRATEGIES = [
+  { value: '0', label: '最快' },
+  { value: '2', label: '最少换乘' },
+  { value: '5', label: '不乘地铁' },
+];
 const PLACE_FALLBACK = {
   北京站: { lat: 39.9051, lng: 116.4228, label: '北京站', city: '北京市' },
   北京西站: { lat: 39.894, lng: 116.3151, label: '北京西站', city: '北京市' },
@@ -71,21 +104,172 @@ const PLACE_FALLBACK = {
   杭州东站: { lat: 30.294, lng: 120.208, label: '杭州东站', city: '杭州市' },
   西安北站: { lat: 34.381, lng: 108.934, label: '西安北站', city: '西安市' },
   成都东站: { lat: 30.631, lng: 104.139, label: '成都东站', city: '成都市' },
+  北京: { lat: 39.9057, lng: 116.3913, label: '北京市', city: '北京市' },
+  故宫: { lat: 39.9173, lng: 116.3908, label: '故宫', city: '北京市' },
+  故宫博物院: { lat: 39.9173, lng: 116.3908, label: '故宫', city: '北京市' },
+  西单: { lat: 39.9057, lng: 116.3682, label: '西单', city: '北京市' },
+  国贸: { lat: 39.9107, lng: 116.4535, label: '中国国际贸易中心', city: '北京市' },
+  北京大学: { lat: 39.9917, lng: 116.304, label: '北京大学', city: '北京市' },
+  北京首都国际机场: { lat: 40.0802, lng: 116.5939, label: '北京首都国际机场', city: '北京市' },
+  首都机场: { lat: 40.0802, lng: 116.5939, label: '北京首都国际机场', city: '北京市' },
+  北京大兴国际机场: { lat: 39.4973, lng: 116.4123, label: '北京大兴国际机场', city: '北京市' },
+  大兴机场: { lat: 39.4973, lng: 116.4123, label: '北京大兴国际机场', city: '北京市' },
+  上海: { lat: 31.2313, lng: 121.47, label: '上海市', city: '上海市' },
+  静安寺: { lat: 31.2252, lng: 121.4408, label: '静安寺', city: '上海市' },
+  复旦大学: { lat: 31.3012, lng: 121.4975, label: '复旦大学', city: '上海市' },
+  上海迪士尼度假区: { lat: 31.1434, lng: 121.662, label: '上海迪士尼度假区', city: '上海市' },
+  迪士尼: { lat: 31.1434, lng: 121.662, label: '上海迪士尼度假区', city: '上海市' },
+  上海浦东国际机场: { lat: 31.1427, lng: 121.8041, label: '上海浦东国际机场', city: '上海市' },
+  浦东机场: { lat: 31.1427, lng: 121.8041, label: '上海浦东国际机场', city: '上海市' },
+  上海虹桥国际机场: { lat: 31.1977, lng: 121.3345, label: '上海虹桥国际机场', city: '上海市' },
+  虹桥机场: { lat: 31.1977, lng: 121.3345, label: '上海虹桥国际机场', city: '上海市' },
+  广州: { lat: 23.1288, lng: 113.259, label: '广州市', city: '广州市' },
+  广州南站: { lat: 22.9911, lng: 113.2605, label: '广州南站', city: '广州市' },
+  珠江新城: { lat: 23.122, lng: 113.3158, label: '珠江新城', city: '广州市' },
+  琶洲: { lat: 23.101, lng: 113.3612, label: '琶洲', city: '广州市' },
+  中山大学: { lat: 23.0996, lng: 113.2924, label: '中山大学（广州校区南校园）', city: '广州市' },
+  广州白云国际机场: { lat: 23.3863, lng: 113.3023, label: '广州白云国际机场', city: '广州市' },
+  白云机场: { lat: 23.3863, lng: 113.3023, label: '广州白云国际机场', city: '广州市' },
+  深圳: { lat: 22.5446, lng: 114.0545, label: '深圳市', city: '深圳市' },
+  深圳北站: { lat: 22.613, lng: 114.0251, label: '深圳北站', city: '深圳市' },
+  世界之窗: { lat: 22.5375, lng: 113.9686, label: '世界之窗', city: '深圳市' },
+  深圳宝安国际机场: { lat: 22.6404, lng: 113.8031, label: '深圳宝安国际机场', city: '深圳市' },
+  宝安机场: { lat: 22.6404, lng: 113.8031, label: '深圳宝安国际机场', city: '深圳市' },
+  杭州: { lat: 30.249, lng: 120.2052, label: '杭州市', city: '杭州市' },
+  西湖: { lat: 30.246, lng: 120.1431, label: '西湖', city: '杭州市' },
+  浙江大学: { lat: 30.3051, lng: 120.0753, label: '浙江大学（紫金港校区）', city: '杭州市' },
+  杭州萧山国际机场: { lat: 30.2369, lng: 120.4291, label: '杭州萧山国际机场', city: '杭州市' },
+  萧山机场: { lat: 30.2369, lng: 120.4291, label: '杭州萧山国际机场', city: '杭州市' },
+  西安: { lat: 34.261, lng: 108.9423, label: '西安市', city: '西安市' },
+  西安站: { lat: 34.2799, lng: 108.9582, label: '西安站', city: '西安市' },
+  大雁塔: { lat: 34.2198, lng: 108.9594, label: '大雁塔', city: '西安市' },
+  西安咸阳国际机场: { lat: 34.4424, lng: 108.76, label: '西安咸阳国际机场', city: '西安市' },
+  咸阳机场: { lat: 34.4424, lng: 108.76, label: '西安咸阳国际机场', city: '西安市' },
+  成都: { lat: 30.6599, lng: 104.0633, label: '成都市', city: '成都市' },
+  春熙路: { lat: 30.6592, lng: 104.0753, label: '春熙路', city: '成都市' },
+  宽窄巷子: { lat: 30.6662, lng: 104.0508, label: '宽窄巷子', city: '成都市' },
+  四川大学: { lat: 30.6335, lng: 104.0816, label: '四川大学（望江校区）', city: '成都市' },
+  成都双流国际机场: { lat: 30.5548, lng: 103.9479, label: '成都双流国际机场', city: '成都市' },
+  双流机场: { lat: 30.5548, lng: 103.9479, label: '成都双流国际机场', city: '成都市' },
+  成都天府国际机场: { lat: 30.3036, lng: 104.4457, label: '成都天府国际机场', city: '成都市' },
+  天府机场: { lat: 30.3036, lng: 104.4457, label: '成都天府国际机场', city: '成都市' },
+  郑州: { lat: 34.7473, lng: 113.6193, label: '郑州市', city: '郑州市' },
+  郑州站: { lat: 34.7475, lng: 113.6537, label: '郑州站', city: '郑州市' },
+  郑州东站: { lat: 34.7601, lng: 113.77, label: '郑州东站', city: '郑州市' },
+  二七广场: { lat: 34.7536, lng: 113.6593, label: '二七广场', city: '郑州市' },
+  中原工学院: { lat: 34.7479, lng: 113.5835, label: '中原工学院', city: '郑州市' },
+  郑州方特: { lat: 34.7672, lng: 113.9244, label: '郑州方特欢乐世界', city: '郑州市' },
+  郑州方特欢乐世界: { lat: 34.7672, lng: 113.9244, label: '郑州方特欢乐世界', city: '郑州市' },
+  郑州新郑国际机场: { lat: 34.5271, lng: 113.8475, label: '郑州新郑国际机场', city: '郑州市' },
+  新郑机场: { lat: 34.5271, lng: 113.8475, label: '郑州新郑国际机场', city: '郑州市' },
+  武汉: { lat: 30.5789, lng: 114.2921, label: '武汉市', city: '武汉市' },
+  武汉站: { lat: 30.6096, lng: 114.4191, label: '武汉站', city: '武汉市' },
+  汉口站: { lat: 30.6217, lng: 114.2494, label: '汉口站', city: '武汉市' },
+  武昌站: { lat: 30.5311, lng: 114.3122, label: '武昌站', city: '武汉市' },
+  黄鹤楼: { lat: 30.5471, lng: 114.297, label: '黄鹤楼', city: '武汉市' },
+  江汉路: { lat: 30.5852, lng: 114.2836, label: '江汉路步行街', city: '武汉市' },
+  江汉路步行街: { lat: 30.5852, lng: 114.2836, label: '江汉路步行街', city: '武汉市' },
+  光谷广场: { lat: 30.5083, lng: 114.3929, label: '光谷广场', city: '武汉市' },
+  武汉大学: { lat: 30.5374, lng: 114.3615, label: '武汉大学', city: '武汉市' },
+  武汉天河国际机场: { lat: 30.7757, lng: 114.2171, label: '武汉天河国际机场', city: '武汉市' },
+  天河机场: { lat: 30.7757, lng: 114.2171, label: '武汉天河国际机场', city: '武汉市' },
+  长沙: { lat: 28.2001, lng: 112.9717, label: '长沙市', city: '长沙市' },
+  长沙站: { lat: 28.1974, lng: 113.0054, label: '长沙站', city: '长沙市' },
+  长沙火车站: { lat: 28.1974, lng: 113.0054, label: '长沙站', city: '长沙市' },
+  长沙南站: { lat: 28.1499, lng: 113.0597, label: '长沙南站', city: '长沙市' },
+  五一广场: { lat: 28.1986, lng: 112.9709, label: '五一广场', city: '长沙市' },
+  橘子洲: { lat: 28.1897, lng: 112.9561, label: '橘子洲', city: '长沙市' },
+  湖南大学: { lat: 28.1835, lng: 112.9413, label: '湖南大学', city: '长沙市' },
+  长沙黄花国际机场: { lat: 28.1906, lng: 113.2198, label: '长沙黄花国际机场', city: '长沙市' },
+  黄花机场: { lat: 28.1906, lng: 113.2198, label: '长沙黄花国际机场', city: '长沙市' },
+  南京: { lat: 32.0438, lng: 118.7789, label: '南京市', city: '南京市' },
+  南京站: { lat: 32.0913, lng: 118.7914, label: '南京站', city: '南京市' },
+  南京南站: { lat: 31.973, lng: 118.7916, label: '南京南站', city: '南京市' },
+  新街口: { lat: 32.0436, lng: 118.7789, label: '新街口', city: '南京市' },
+  夫子庙: { lat: 32.0263, lng: 118.7857, label: '夫子庙', city: '南京市' },
+  南京大学: { lat: 32.0566, lng: 118.7741, label: '南京大学（鼓楼校区）', city: '南京市' },
+  南京禄口国际机场: { lat: 31.7318, lng: 118.8723, label: '南京禄口国际机场', city: '南京市' },
+  禄口机场: { lat: 31.7318, lng: 118.8723, label: '南京禄口国际机场', city: '南京市' },
+  重庆: { lat: 29.5657, lng: 106.5479, label: '重庆市', city: '重庆市' },
+  重庆北站: { lat: 29.6098, lng: 106.5462, label: '重庆北站南广场', city: '重庆市' },
+  重庆西站: { lat: 29.5029, lng: 106.437, label: '重庆西站', city: '重庆市' },
+  沙坪坝站: { lat: 29.5568, lng: 106.4562, label: '沙坪坝站', city: '重庆市' },
+  解放碑: { lat: 29.5601, lng: 106.5734, label: '解放碑', city: '重庆市' },
+  洪崖洞: { lat: 29.5651, lng: 106.5753, label: '洪崖洞', city: '重庆市' },
+  磁器口: { lat: 29.5833, lng: 106.4466, label: '磁器口古镇', city: '重庆市' },
+  磁器口古镇: { lat: 29.5833, lng: 106.4466, label: '磁器口古镇', city: '重庆市' },
+  重庆江北国际机场: { lat: 29.7267, lng: 106.652, label: '重庆江北国际机场', city: '重庆市' },
+  江北机场: { lat: 29.7267, lng: 106.652, label: '重庆江北国际机场', city: '重庆市' },
+  天津: { lat: 39.0844, lng: 117.1957, label: '天津市', city: '天津市' },
+  天津站: { lat: 39.1371, lng: 117.2036, label: '天津站', city: '天津市' },
+  天津西站: { lat: 39.1573, lng: 117.1569, label: '天津西站', city: '天津市' },
+  五大道: { lat: 39.1041, lng: 117.1921, label: '五大道', city: '天津市' },
+  意式风情区: { lat: 39.1352, lng: 117.1925, label: '意式风情区', city: '天津市' },
+  天津滨海国际机场: { lat: 39.1275, lng: 117.3548, label: '天津滨海国际机场', city: '天津市' },
+  滨海机场: { lat: 39.1275, lng: 117.3548, label: '天津滨海国际机场', city: '天津市' },
+  苏州: { lat: 31.3111, lng: 120.6213, label: '苏州市', city: '苏州市' },
+  苏州站: { lat: 31.3318, lng: 120.6063, label: '苏州站', city: '苏州市' },
+  拙政园: { lat: 31.3264, lng: 120.6247, label: '拙政园', city: '苏州市' },
+  青岛: { lat: 36.0663, lng: 120.3778, label: '青岛市', city: '青岛市' },
+  青岛站: { lat: 36.0644, lng: 120.3084, label: '青岛站', city: '青岛市' },
+  栈桥: { lat: 36.062, lng: 120.3144, label: '栈桥', city: '青岛市' },
+  青岛胶东国际机场: { lat: 36.362, lng: 120.088, label: '青岛胶东国际机场', city: '青岛市' },
+  胶东机场: { lat: 36.362, lng: 120.088, label: '青岛胶东国际机场', city: '青岛市' },
+  济南: { lat: 36.652, lng: 117.1138, label: '济南市', city: '济南市' },
+  济南站: { lat: 36.6687, lng: 116.985, label: '济南站', city: '济南市' },
+  济南遥墙国际机场: { lat: 36.8529, lng: 117.211, label: '济南遥墙国际机场', city: '济南市' },
+  合肥: { lat: 31.8666, lng: 117.2814, label: '合肥市', city: '合肥市' },
+  合肥南站: { lat: 31.8003, lng: 117.2847, label: '合肥南站', city: '合肥市' },
+  福州: { lat: 26.0775, lng: 119.2918, label: '福州市', city: '福州市' },
+  福州站: { lat: 26.1169, lng: 119.3156, label: '福州站', city: '福州市' },
+  厦门: { lat: 24.4801, lng: 118.0853, label: '厦门市', city: '厦门市' },
+  厦门站: { lat: 24.4702, lng: 118.1112, label: '厦门站', city: '厦门市' },
+  厦门大学: { lat: 24.4399, lng: 118.093, label: '厦门大学', city: '厦门市' },
+  厦门高崎国际机场: { lat: 24.5438, lng: 118.1327, label: '厦门高崎国际机场', city: '厦门市' },
+  昆明: { lat: 25.0399, lng: 102.7169, label: '昆明市', city: '昆明市' },
+  昆明站: { lat: 25.0206, lng: 102.7222, label: '昆明站', city: '昆明市' },
+  昆明长水国际机场: { lat: 25.1088, lng: 102.9397, label: '昆明长水国际机场', city: '昆明市' },
+  沈阳: { lat: 41.8026, lng: 123.4279, label: '沈阳市', city: '沈阳市' },
+  沈阳站: { lat: 41.7915, lng: 123.39, label: '沈阳站', city: '沈阳市' },
+  哈尔滨: { lat: 45.7594, lng: 126.6276, label: '哈尔滨市', city: '哈尔滨市' },
+  哈尔滨站: { lat: 45.76, lng: 126.6254, label: '哈尔滨站', city: '哈尔滨市' },
+  大连: { lat: 38.913, lng: 121.6098, label: '大连市', city: '大连市' },
+  大连站: { lat: 38.9217, lng: 121.6277, label: '大连站', city: '大连市' },
+  大连周水子国际机场: { lat: 38.9642, lng: 121.5392, label: '大连周水子国际机场', city: '大连市' },
+  南宁: { lat: 22.8158, lng: 108.318, label: '南宁市', city: '南宁市' },
+  南宁东站: { lat: 22.8448, lng: 108.4099, label: '南宁东站', city: '南宁市' },
+  贵阳: { lat: 26.5878, lng: 106.7087, label: '贵阳市', city: '贵阳市' },
+  贵阳北站: { lat: 26.6228, lng: 106.6725, label: '贵阳北站', city: '贵阳市' },
+  贵阳龙洞堡国际机场: { lat: 26.5409, lng: 106.8022, label: '贵阳龙洞堡国际机场', city: '贵阳市' },
+  兰州: { lat: 36.0526, lng: 103.8395, label: '兰州市', city: '兰州市' },
+  兰州站: { lat: 36.0342, lng: 103.8485, label: '兰州站', city: '兰州市' },
+  石家庄站: { lat: 38.0095, lng: 114.4781, label: '石家庄站', city: '石家庄市' },
+  太原: { lat: 37.87, lng: 112.5437, label: '太原市', city: '太原市' },
+  太原站: { lat: 37.86, lng: 112.5818, label: '太原站', city: '太原市' },
+  南昌: { lat: 28.6773, lng: 115.8997, label: '南昌市', city: '南昌市' },
+  南昌站: { lat: 28.6653, lng: 115.9148, label: '南昌站', city: '南昌市' },
+  宁波: { lat: 29.872, lng: 121.55, label: '宁波市', city: '宁波市' },
+  宁波站: { lat: 29.8646, lng: 121.5327, label: '宁波站', city: '宁波市' },
+  温州: { lat: 27.9964, lng: 120.6953, label: '温州市', city: '温州市' },
+  温州南站: { lat: 27.9693, lng: 120.5816, label: '温州南站', city: '温州市' },
 };
-const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright" rel="noopener">OpenStreetMap</a>';
-const SAFETY_DISCLAIMER = '安全评分基于演示数据与启发式估算，仅供参考';
-const TILE_SOURCES = [
-  { url: 'https://tile.openstreetmap.de/{z}/{x}/{y}.png', maxZoom: 19 },
-  { url: 'https://a.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', maxZoom: 19 },
-];
+const TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright" rel="noopener">OpenStreetMap</a> contributors';
+const TILE_PRIMARY = { url: 'https://tile.openstreetmap.de/{z}/{x}/{y}.png', maxZoom: 19 };
+const TILE_FALLBACK = { url: 'https://b.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', maxZoom: 19 };
+const TILE_ERROR_LIMIT = 3;
+const TILE_PROBE_TIMEOUT = 1000;
+const TILE_SKELETON_MIN = 4;
 
 const trip = readTrip();
 const state = {
   origin: null,
   originManual: false,
   originCity: '',
+  originCityName: '',
   dest: null,
   destCity: '',
+  destLabel: '',
+  destCandidates: [],
   watchId: null,
   viewMode: 'none',
   lastFix: null,
@@ -95,7 +279,11 @@ const state = {
   routeLayers: [],
   routeCandidates: [],
   selectedRouteIndex: 0,
+  transitStrategy: '0',
+  transitDemoReason: '',
+  transitPending: false,
   bannerTimer: 0,
+  nav: { mode: 'off', offHits: 0, lastPan: 0, rerouting: false, view: null },
   engine: null,
   fuel: { loading: false, key: '', list: [], selectedId: '', layers: [] },
   weather: { loading: false, key: '' },
@@ -109,8 +297,8 @@ let originIcon = null;
 let manualIcon = null;
 let destinationIcon = null;
 let tileLayer = null;
-let tileIndex = 0;
 let tileErrors = 0;
+let tileProbed = false;
 
 function readTrip() {
   try {
@@ -142,8 +330,12 @@ function isDrive() {
   return trip?.mode === 'drive';
 }
 
+function isWalk() {
+  return trip?.mode === 'walk';
+}
+
 function wantsRoute() {
-  return isTransit() || isDrive();
+  return isTransit() || isDrive() || isWalk();
 }
 
 function ink() {
@@ -249,7 +441,9 @@ function onFix(position) {
     feedReminder(fix);
   }
   if (isDrive()) maybePlanRoute();
-  if (trip?.mode === 'walk') loadWeather();
+  loadWeather();
+  if (isWalk()) maybePlanRoute();
+  if (state.nav.mode !== 'off') updateNavigation(fix);
 }
 
 function onGeoError(error) {
@@ -327,66 +521,189 @@ function considerView() {
   }
 }
 
-async function resolveDestination() {
-  els.destNote.hidden = false;
-  els.destNote.textContent = '正在定位目的地…';
-  try {
-    const place = await geocode(trip.destination);
-    const latlng = L.latLng(place.lat, place.lng);
-    state.dest = latlng;
-    state.destCity = place.city || '';
-    destinationMarker = L.marker(latlng, { icon: destinationIcon, keyboard: false }).addTo(map);
-    els.destNote.hidden = true;
-    considerView();
-    if (wantsRoute()) maybePlanRoute();
-    if (trip?.mode === 'walk') loadWeather();
-  } catch {
-    els.destNote.hidden = false;
-    els.destNote.textContent = '地图上暂未找到该地点';
+let destToken = 0;
+
+async function waitForOrigin(timeout = 6000) {
+  const started = Date.now();
+  while (!state.origin && Date.now() - started < timeout) {
+    await new Promise((resolve) => setTimeout(resolve, 200));
   }
 }
 
-async function geocode(query) {
-  const cacheKey = `zenmap:geo:v1:${query.toLowerCase()}`;
-  const cached = ZenStore.get(cacheKey, GEO_TTL);
-  if (cached) return cached;
+async function resolveDestination() {
+  const token = ++destToken;
+  els.destNote.hidden = false;
+  els.destNoteWarn.hidden = true;
+  els.destSwitch.hidden = true;
+  els.destNoteText.textContent = '正在定位目的地…';
+  hideCandidatePanel();
+  await waitForOrigin();
 
   try {
-    const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=1`;
-    const data = await ZenNet.fetchJson(url, { timeout: 9000, retries: 1 });
-    const feature = data?.features?.[0];
-    const coordinates = feature?.geometry?.coordinates;
-    if (!Array.isArray(coordinates) || coordinates.length < 2) throw new Error('geocode-empty');
+    const place = await geocode(trip.destination);
+    if (token !== destToken) return;
+    state.destCandidates = (place.candidates || []).length > 1 ? place.candidates : [];
+    if (place.degraded) els.destNoteWarn.hidden = false;
 
-    const [lng, lat] = coordinates;
-    const props = feature.properties ?? {};
-    const place = { lat, lng, label: props.name || props.street || query, city: props.state || props.city || '' };
-    ZenStore.set(cacheKey, place);
-    return place;
+    if (state.destCandidates.length) {
+      els.destNoteText.textContent = `找到 ${state.destCandidates.length} 个可能地点`;
+      els.destSwitch.textContent = '看候选';
+      els.destSwitch.hidden = false;
+      renderCandidatePanel();
+      return;
+    }
+    applyChoice({ name: place.label, district: place.district, lat: place.lat, lng: place.lng, transitCity: place.city }, { plan: true });
+  } catch {
+    if (token !== destToken) return;
+    state.destCandidates = [];
+    hideCandidatePanel();
+    els.destNoteText.textContent = `没找到「${trip.destination}」，试试输入城市名、火车站或地标`;
+  }
+}
+
+function applyChoice(choice, { plan }) {
+  const latlng = L.latLng(choice.lat, choice.lng);
+  state.dest = latlng;
+  state.destLabel = choice.name || trip.destination;
+  state.destCity = choice.transitCity || '';
+  if (destinationMarker) map.removeLayer(destinationMarker);
+  destinationMarker = L.marker(latlng, { icon: destinationIcon, keyboard: false }).addTo(map);
+
+  hideCandidatePanel();
+  els.destNoteText.textContent = `已定位：${choice.name}${choice.district ? `（${choice.district}）` : ''}`;
+  els.destSwitch.textContent = '换一个';
+  els.destSwitch.hidden = state.destCandidates.length < 2;
+
+  considerView();
+  if (!plan) return;
+  if (wantsRoute()) maybePlanRoute();
+  loadWeather();
+  loadDestWeather();
+}
+
+function renderCandidatePanel() {
+  els.destCandidatesTitle.textContent = `找到 ${state.destCandidates.length} 个可能地点`;
+  els.destCandidateList.textContent = '';
+
+  state.destCandidates.forEach((candidate, index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.candidateIndex = String(index);
+    button.className = `zen-option w-full border border-zen-line px-3 py-2.5 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zen-ink${index === 0 ? ' zen-option-active' : ''}`;
+
+    const name = document.createElement('span');
+    name.className = 'block text-sm font-medium tracking-[-0.01em]';
+    name.textContent = candidate.name;
+
+    const detail = document.createElement('span');
+    detail.className = 'zen-cand-sub mt-0.5 block text-xs leading-5 text-zen-ghost';
+    detail.textContent = candidateDetail(candidate);
+
+    button.append(name, detail);
+    const item = document.createElement('li');
+    item.append(button);
+    els.destCandidateList.append(item);
+  });
+
+  els.destCandidatesPanel.hidden = false;
+}
+
+function candidateDetail(candidate) {
+  const parts = [];
+  if (candidate.district) parts.push(candidate.district);
+  if (state.origin) parts.push(`距起点 ${(distanceBetween(state.origin, candidate) / 1000).toFixed(1)} km`);
+  if ((candidate.members || []).length > 1) parts.push(`同片区共 ${candidate.members.length} 个场所`);
+  return parts.join(' · ');
+}
+
+function hideCandidatePanel() {
+  els.destCandidatesPanel.hidden = true;
+}
+
+function selectCandidate(index) {
+  const candidate = state.destCandidates[index];
+  if (!candidate) return;
+  resetRouteState();
+  applyChoice({ name: candidate.name, district: candidate.district, lat: candidate.lat, lng: candidate.lng, transitCity: candidate.province || candidate.city }, { plan: true });
+}
+
+async function geocode(query) {
+  const cacheKey = `zenmap:geo:v3:${query.trim().toLowerCase()}`;
+  const cached = ZenStore.get(cacheKey, GEO_TTL);
+  if (cached) return pickPlace(cached);
+
+  const cityTask = poiCityName();
+  const wideTask = collectPoiItems(query, '').catch(() => null);
+  const [cityName, wide] = await Promise.all([cityTask, wideTask]);
+
+  try {
+    const result = await buildPoiCandidates(query, { cityName, wide });
+    ZenStore.set(cacheKey, result);
+    return pickPlace(result);
   } catch (error) {
     const stale = ZenStore.getStale(cacheKey);
-    if (stale) return stale;
+    if (stale) return pickPlace(stale);
     const fallback = PLACE_FALLBACK[query.trim().toLowerCase()];
-    if (fallback) return fallback;
+    if (fallback) return { ...fallback, district: '', cityName: '', candidates: null, selected: 0, degraded: true };
     throw error;
   }
 }
 
-async function reverseCity(latlng) {
-  const cacheKey = `zenmap:rev:v1:${latlng.lat.toFixed(3)},${latlng.lng.toFixed(3)}`;
-  const cached = ZenStore.get(cacheKey, GEO_TTL);
-  if (cached !== null) return cached;
+function pickPlace(result) {
+  const ranked = rankPoiGroups(result.groups, state.origin);
+  const picked = ranked.list[ranked.selected];
+  if (!picked) throw new Error('geocode-empty');
 
-  try {
-    const url = `https://photon.komoot.io/reverse?lat=${latlng.lat}&lon=${latlng.lng}`;
-    const data = await ZenNet.fetchJson(url, { timeout: 8000, retries: 0 });
-    const props = data?.features?.[0]?.properties ?? {};
-    const city = props.state || props.city || '';
-    ZenStore.set(cacheKey, city);
-    return city;
-  } catch {
-    return ZenStore.getStale(cacheKey) ?? '';
-  }
+  return {
+    lat: picked.lat,
+    lng: picked.lng,
+    label: picked.name,
+    district: picked.district || '',
+    city: picked.province || picked.city || '',
+    cityName: picked.city || picked.province || '',
+    candidates: ranked.list,
+    selected: ranked.selected,
+    degraded: !!result.degraded,
+  };
+}
+
+async function poiCityName() {
+  if (state.originCityName) return state.originCityName;
+  if (!state.origin) return '';
+  const info = await reverseCity(state.origin);
+  return info.city || info.province || '';
+}
+
+const reversePending = new Map();
+
+async function reverseCity(latlng) {
+  const cacheKey = `zenmap:rev:v2:${latlng.lat.toFixed(3)},${latlng.lng.toFixed(3)}`;
+  const cached = ZenStore.get(cacheKey, GEO_TTL);
+  if (cached) return cached;
+  if (reversePending.has(cacheKey)) return reversePending.get(cacheKey);
+
+  const task = (async () => {
+    try {
+      const url = `https://photon.komoot.io/reverse?lat=${latlng.lat}&lon=${latlng.lng}&lang=default`;
+      const data = await ZenNet.fetchJson(url, { timeout: 8000, retries: 0 });
+      const props = data?.features?.[0]?.properties ?? {};
+      const info = { province: props.state || '', city: props.city || '' };
+      ZenStore.set(cacheKey, info);
+      return info;
+    } catch {
+      return ZenStore.getStale(cacheKey) ?? { province: '', city: '' };
+    } finally {
+      reversePending.delete(cacheKey);
+    }
+  })();
+
+  reversePending.set(cacheKey, task);
+  return task;
+}
+
+async function cityNameForTransit(latlng) {
+  const info = await reverseCity(latlng);
+  return info.province || info.city || '';
 }
 
 function showOriginError(message) {
@@ -416,14 +733,12 @@ async function onSubmit(event) {
     stopWatch();
     setOrigin(L.latLng(place.lat, place.lng), { manual: true });
     state.originCity = place.city || '';
+    state.originCityName = place.cityName || place.city || '';
     render('manual', { label: place.label });
     state.viewMode = 'none';
+    if (wantsRoute()) resetRouteState();
+    await resolveDestination();
     considerView();
-    if (wantsRoute()) {
-      resetRouteState();
-      maybePlanRoute();
-    }
-    if (trip?.mode === 'walk') loadWeather();
   } catch {
     showOriginError('没找到这个地点，或服务暂不可用');
     els.input.focus({ preventScroll: true });
@@ -435,11 +750,32 @@ async function onSubmit(event) {
 function resetRouteState() {
   state.planToken += 1;
   state.routePending = false;
+  state.transitPending = false;
   state.route = null;
   state.routeCandidates = [];
   state.selectedRouteIndex = 0;
+  state.transitDemoReason = '';
   state.engine?.clear();
   clearRouteLayers();
+  els.routeOptions.hidden = true;
+  els.routeOptions.textContent = '';
+  els.safetyDisclaimer.hidden = true;
+  syncStartNavButton();
+}
+
+const STAGED_NOTE_DELAY = 5000;
+const STAGED_NOTE_TEXT = '网络较慢，仍在重试';
+
+function beginStagedNote() {
+  const timer = window.setTimeout(() => {
+    els.routeNote.hidden = false;
+    els.routeNote.textContent = STAGED_NOTE_TEXT;
+  }, STAGED_NOTE_DELAY);
+
+  return () => {
+    window.clearTimeout(timer);
+    if (els.routeNote.textContent === STAGED_NOTE_TEXT) els.routeNote.hidden = true;
+  };
 }
 
 async function planTransitTrip() {
@@ -452,45 +788,149 @@ async function planTransitTrip() {
   els.routeSummary.textContent = '正在规划路线…';
   els.routeNote.hidden = true;
   els.remindStatus.textContent = '等待定位…';
+  renderTransitStrategy();
+  const staged = beginStagedNote();
 
-  let demoReason = '';
-  const routeKey = `zenmap:transit:v1:${state.origin.lat.toFixed(4)},${state.origin.lng.toFixed(4)}>${state.dest.lat.toFixed(4)},${state.dest.lng.toFixed(4)}`;
   try {
-    const cached = ZenStore.get(routeKey, ROUTE_TTL);
-    if (cached) {
-      applyRoute(cached, '');
-      return;
-    }
-    const key = (window.ZENMAP_CONFIG?.amapKey || '').trim();
-    if (!key) {
-      demoReason = 'no-key';
-      throw new Error('no-key');
-    }
-    const city1 = state.originCity || (await reverseCity(state.origin));
-    const city2 = state.destCity || (await reverseCity(state.dest));
-    if (!city1 || !city2) {
-      demoReason = 'no-city';
-      throw new Error('no-city');
-    }
-    const route = await fetchTransitRoute({
-      key,
-      origin: state.origin,
-      destination: state.dest,
-      city1,
-      city2,
-    });
+    const plans = await loadTransitPlans(state.transitStrategy);
     if (token !== state.planToken) return;
-    state.originCity = city1;
-    state.destCity = city2;
-    ZenStore.set(routeKey, route);
-    applyRoute(route, '');
+    applyTransitPlans(plans, '');
+  } catch (error) {
+    if (token !== state.planToken) return;
+    const reason = error?.message === 'no-key' || error?.message === 'no-city' ? error.message : 'api';
+    applyTransitPlans([buildDemoRoute(state.origin, state.dest)], reason);
+  } finally {
+    staged();
+    if (token === state.planToken) state.routePending = false;
+  }
+}
+
+async function loadTransitPlans(strategy) {
+  const routeKey = routeCacheKey('transit', 'v2', strategy);
+  const cached = ZenStore.get(routeKey, ROUTE_TTL);
+  if (Array.isArray(cached) && cached.length) return cached;
+
+  const key = (window.ZENMAP_CONFIG?.amapKey || '').trim();
+  if (!key) throw new Error('no-key');
+  const city1 = state.originCity || (await cityNameForTransit(state.origin));
+  const city2 = state.destCity || (await cityNameForTransit(state.dest));
+  if (!city1 || !city2) throw new Error('no-city');
+
+  const plans = await fetchTransitPlans({
+    key,
+    origin: state.origin,
+    destination: state.dest,
+    city1,
+    city2,
+    destinationName: state.destLabel,
+    strategy,
+  });
+  for (const plan of plans) plan.crossCity = city1 !== city2;
+  state.originCity = city1;
+  state.destCity = city2;
+  ZenStore.set(routeKey, plans);
+  return plans;
+}
+
+function applyTransitPlans(plans, demoReason) {
+  state.routeCandidates = plans;
+  state.selectedRouteIndex = 0;
+  state.transitDemoReason = demoReason;
+  applyRoute(plans[0], demoReason);
+  renderTransitOptions();
+  renderTransitStrategy();
+}
+
+async function switchTransitStrategy(strategy) {
+  if (strategy === state.transitStrategy || state.transitPending || !state.routeCandidates.length) return;
+
+  const previous = state.transitStrategy;
+  const token = state.planToken;
+  state.transitStrategy = strategy;
+  state.transitPending = true;
+  els.routeNote.hidden = false;
+  els.routeNote.textContent = '正在刷新方案…';
+  renderTransitStrategy();
+
+  try {
+    const plans = await loadTransitPlans(strategy);
+    if (token !== state.planToken || strategy !== state.transitStrategy) return;
+    applyTransitPlans(plans, '');
   } catch {
     if (token !== state.planToken) return;
-    if (!demoReason) demoReason = 'api';
-    const route = buildDemoRoute(state.origin, state.dest);
-    applyRoute(route, demoReason);
+    state.transitStrategy = previous;
+    els.routeNote.textContent = '策略切换失败，仍是上次结果，可稍后重试';
+    renderTransitStrategy();
   } finally {
-    if (token === state.planToken) state.routePending = false;
+    if (token === state.planToken) {
+      state.transitPending = false;
+      renderTransitStrategy();
+    }
+  }
+}
+
+function renderTransitStrategy() {
+  if (!isTransit()) {
+    els.routeStrategy.hidden = true;
+    return;
+  }
+  els.routeStrategy.hidden = false;
+  els.routeStrategy.setAttribute('aria-busy', String(state.transitPending));
+  els.routeStrategy.textContent = '';
+
+  for (const option of TRANSIT_STRATEGIES) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.strategy = option.value;
+    button.setAttribute('aria-pressed', String(option.value === state.transitStrategy));
+    button.setAttribute('aria-busy', String(state.transitPending));
+    button.disabled = state.transitPending;
+    button.className = 'zen-mini text-xs';
+    button.textContent = option.label;
+    els.routeStrategy.append(button);
+  }
+}
+
+function selectTransitPlan(index) {
+  const plan = state.routeCandidates[index];
+  if (!plan || index === state.selectedRouteIndex) return;
+  state.selectedRouteIndex = index;
+  applyRoute(plan, state.transitDemoReason);
+  renderTransitOptions();
+}
+
+function renderTransitOptions() {
+  els.routeOptions.hidden = false;
+  els.routeOptions.textContent = '';
+
+  for (const [index, plan] of state.routeCandidates.entries()) {
+    const active = index === state.selectedRouteIndex;
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.index = String(index);
+    button.setAttribute('aria-pressed', String(active));
+    button.className = `zen-option border border-zen-line px-3 py-2 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zen-ink${active ? ' zen-option-active' : ''}`;
+
+    const name = document.createElement('span');
+    name.className = 'block text-[0.6875rem] tracking-[0.12em]';
+    name.textContent = plan.demo ? `${plan.id} · 离线演示` : plan.id;
+
+    const metric = document.createElement('span');
+    metric.className = 'mt-1 block text-sm font-medium tracking-tight';
+    metric.textContent = [plan.title, formatDuration(plan.duration), plan.cost != null ? `¥${plan.cost}` : '']
+      .filter(Boolean)
+      .join(' · ');
+
+    const meta = document.createElement('span');
+    meta.className = 'mt-1 block text-[0.6875rem] opacity-70';
+    const bits = plan.modeTags.slice();
+    if (plan.transferCount > 0) bits.push(`换乘 ${plan.transferCount} 次`);
+    if (plan.walkingDistance > 0) bits.push(`步行 ${formatMeters(plan.walkingDistance)}`);
+    meta.textContent = bits.join(' · ');
+
+    button.append(name, metric, meta);
+    els.routeOptions.append(button);
   }
 }
 
@@ -502,12 +942,14 @@ function maybePlanRoute() {
   queueMicrotask(() => {
     planScheduled = false;
     if (isTransit()) planTransitTrip();
+    else if (isWalk()) planWalkTrip();
     else planDriveTrip();
   });
 }
 
-function routeCacheKey(prefix) {
-  return `zenmap:${prefix}:v1:${state.origin.lat.toFixed(4)},${state.origin.lng.toFixed(4)}>${state.dest.lat.toFixed(4)},${state.dest.lng.toFixed(4)}`;
+function routeCacheKey(prefix, version = 'v1', suffix = '') {
+  const pair = `${state.origin.lat.toFixed(4)},${state.origin.lng.toFixed(4)}>${state.dest.lat.toFixed(4)},${state.dest.lng.toFixed(4)}`;
+  return `zenmap:${prefix}:${version}${suffix ? `:${suffix}` : ''}:${pair}`;
 }
 
 async function planDriveTrip() {
@@ -521,6 +963,7 @@ async function planDriveTrip() {
   els.routeNote.hidden = true;
   els.routeOptions.hidden = true;
   els.routeSafety.hidden = true;
+  const staged = beginStagedNote();
 
   const routeKey = routeCacheKey('drive');
   try {
@@ -537,8 +980,80 @@ async function planDriveTrip() {
     if (token !== state.planToken) return;
     await applyDriveRoutes(buildDriveEstimates(state.origin, state.dest, 2), token);
   } finally {
+    staged();
     if (token === state.planToken) state.routePending = false;
   }
+}
+
+async function planWalkTrip() {
+  if (!isWalk() || !state.origin || !state.dest || state.route || state.routePending) return;
+
+  const token = state.planToken;
+  state.routePending = true;
+  els.routePanel.hidden = false;
+  els.routeTag.textContent = '';
+  els.routeSummary.textContent = '正在规划路线…';
+  els.routeNote.hidden = true;
+  els.routeOptions.hidden = true;
+  els.routeSafety.hidden = true;
+
+  const routeKey = routeCacheKey('walk');
+  const staged = beginStagedNote();
+  try {
+    const cached = ZenStore.get(routeKey, ROUTE_TTL);
+    if (cached) {
+      await applyWalkRoute(cached, token);
+      return;
+    }
+    const route = await fetchWalkRoute({ origin: state.origin, destination: state.dest });
+    if (token !== state.planToken) return;
+    ZenStore.set(routeKey, route);
+    await applyWalkRoute(route, token);
+  } catch {
+    if (token !== state.planToken) return;
+    await applyWalkRoute(buildWalkEstimate(state.origin, state.dest), token);
+  } finally {
+    staged();
+    if (token === state.planToken) state.routePending = false;
+  }
+}
+
+async function applyWalkRoute(route, token) {
+  if (token !== state.planToken) return;
+
+  const weather = await weatherForScoring(state.origin);
+  if (token !== state.planToken) return;
+  route.safety = scoreRoute(route.points, { weather, mode: 'walk' });
+
+  state.route = route;
+  els.routePanel.hidden = false;
+  els.routeTag.textContent = route.estimated ? '直线估算' : 'OSRM · 步行';
+  els.routeSummary.textContent = `${formatMeters(route.total)} · ${formatDuration(route.duration)}`;
+  els.routeNote.hidden = false;
+  els.routeNote.textContent = route.estimated
+    ? '步行路径服务暂不可用，当前为直线估算'
+    : '步行路线来自 OSM 步行路网，国内人行道覆盖有限';
+
+  clearRouteLayers();
+  renderRouteSafety(route);
+  const color = ink();
+  state.routeLayers.push(
+    L.polyline(
+      route.points.map((point) => [point.lat, point.lng]),
+      route.estimated
+        ? { color, weight: 4, opacity: 0.9, dashArray: '6 8', lineCap: 'round' }
+        : { color, weight: 4, opacity: 0.9, lineCap: 'round' },
+    ).addTo(map),
+  );
+
+  const bounds = L.latLngBounds(route.points.map((point) => [point.lat, point.lng]));
+  map.fitBounds(bounds.pad(0.12), {
+    paddingTopLeft: [36, 96],
+    paddingBottomRight: [36, sheetHeight() + 24],
+    maxZoom: 16,
+  });
+  state.viewMode = 'both';
+  syncStartNavButton();
 }
 
 async function weatherForScoring(place) {
@@ -561,27 +1076,102 @@ function applyRoute(route, demoReason) {
   drawRoute(route);
   state.engine?.setRoute(route);
   if (state.lastFix) feedReminder(state.lastFix);
+  syncStartNavButton();
 }
 
 function renderRouteInfo(route, demoReason) {
   els.routePanel.hidden = false;
   els.routeTag.textContent = demoReason ? '离线演示' : '高德 · 公交';
 
-  const minutes = Math.max(1, Math.round(route.duration / 60));
-  const bits = [`约 ${minutes} 分钟`];
+  const bits = [formatDuration(route.duration)];
   if (route.walkingDistance > 0) bits.push(`步行 ${formatMeters(route.walkingDistance)}`);
+  if (route.totalDistance > 0) bits.push(`全程 ${formatMeters(route.totalDistance)}`);
   if (route.cost != null) bits.push(`¥${route.cost}`);
   els.routeSummary.textContent = bits.join(' · ');
-  els.boardName.textContent = route.boarding.name || '上车站';
-  els.alightName.textContent = route.alighting.name || '下车站';
 
-  els.routeNote.hidden = !demoReason;
-  els.routeNote.textContent =
-    demoReason === 'no-key'
-      ? '未配置高德 Key，当前为离线演示线路；填入 Key 后自动切换真实线路'
-      : demoReason === 'no-city'
-        ? '无法确定所在城市，当前为离线演示线路'
-        : '线路服务暂不可用，当前为离线演示线路';
+  renderTransitStops(route);
+  renderTransitCross(route);
+
+  const note = transitRouteNote(route, demoReason);
+  els.routeNote.hidden = !note;
+  els.routeNote.textContent = note;
+}
+
+function transitRouteNote(route, demoReason) {
+  if (demoReason === 'no-key') return '未配置高德 Key，当前为离线演示线路；填入 Key 后自动切换真实线路';
+  if (demoReason === 'no-city') return '无法确定所在城市，当前为离线演示线路';
+  if (demoReason) return '线路服务暂不可用，当前为离线演示线路';
+  if (route.noMetroFallback) return '没有找到不含地铁的方案，仍显示原结果';
+  return '';
+}
+
+function formatDuration(seconds) {
+  const total = Math.max(1, Math.round((Number(seconds) || 0) / 60));
+  const hours = Math.floor(total / 60);
+  return hours ? `约 ${hours} 小时 ${total % 60} 分` : `约 ${total} 分钟`;
+}
+
+function formatAmapClock(value) {
+  const digits = String(value ?? '').replace(/\D/g, '');
+  if (digits.length < 3) return '';
+  const time = digits.slice(-4).padStart(4, '0');
+  return `${time.slice(0, 2)}:${time.slice(2)}`;
+}
+
+function lastRideLegs(route) {
+  const rides = route.legs.filter((leg) => !leg.walking);
+  const taxi = rides.length && rides[rides.length - 1].kind === 'taxi' ? rides[rides.length - 1] : null;
+  return { taxi, last: taxi ? rides[rides.length - 2] : rides[rides.length - 1] };
+}
+
+function railwayLabel(leg) {
+  const clock = formatAmapClock(leg.fromTime);
+  const arrive = `${formatAmapClock(leg.toTime)}${leg.toNextDay ? ' 次日' : ''}`;
+  if (!clock) return [leg.toName, leg.name].filter(Boolean).join(' · ');
+  return `${leg.toName} · ${leg.name} ${clock} → ${arrive}`;
+}
+
+function renderTransitStops(route) {
+  els.boardName.textContent = route.boarding.name || '上车站';
+  const { taxi, last } = lastRideLegs(route);
+
+  if (last?.kind === 'railway') {
+    els.alightName.textContent = railwayLabel(last) || route.alighting.name || '下车站';
+  } else {
+    els.alightName.textContent = (last && last.toName) || route.alighting.name || '下车站';
+  }
+
+  if (taxi) {
+    els.alightExtra.textContent = `${taxi.toName || '目的地'}（打车 ${formatMeters(taxi.distance)}）`;
+    els.alightExtra.hidden = false;
+  } else {
+    els.alightExtra.hidden = true;
+  }
+}
+
+function renderTransitCross(route) {
+  els.transitCross.hidden = !route.crossCity;
+  els.transitLegs.hidden = true;
+  els.transitCrossToggle.textContent = '查看分段';
+  if (!route.crossCity) return;
+
+  els.transitCrossText.textContent = '跨城出行建议乘高铁，普速方案仅供参考';
+  els.transitLegs.textContent = '';
+  for (const leg of route.legs) {
+    const item = document.createElement('li');
+    item.textContent = transitLegText(leg);
+    els.transitLegs.append(item);
+  }
+}
+
+function transitLegText(leg) {
+  const distance = leg.distance > 0 ? ` · ${formatMeters(leg.distance)}` : '';
+  if (leg.walking) return `步行${distance}`;
+  if (leg.kind === 'railway') {
+    return `${leg.name}｜${leg.fromName} ${formatAmapClock(leg.fromTime)} → ${leg.toName} ${formatAmapClock(leg.toTime)}${leg.toNextDay ? '（次日）' : ''}${distance}`;
+  }
+  if (leg.kind === 'taxi') return `打车｜${leg.fromName || '上车点'} → ${leg.toName || '目的地'}${distance}`;
+  return `${leg.name}｜${leg.fromName} → ${leg.toName}${distance}`;
 }
 
 function drawRoute(route) {
@@ -590,13 +1180,12 @@ function drawRoute(route) {
 
   for (const leg of route.legs) {
     if (leg.points.length < 2) continue;
-    const line = L.polyline(
-      leg.points.map((point) => [point.lat, point.lng]),
-      leg.walking
-        ? { color, weight: 2, opacity: 0.35, dashArray: '1 6', lineCap: 'round' }
-        : { color, weight: 4, opacity: 0.9, lineCap: 'round' },
-    ).addTo(map);
-    state.routeLayers.push(line);
+    const style = leg.walking
+      ? { color, weight: 2, opacity: 0.35, dashArray: '1 6', lineCap: 'round' }
+      : leg.kind === 'taxi'
+        ? { color, weight: 3, opacity: 0.7, dashArray: '8 8', lineCap: 'round' }
+        : { color, weight: 4, opacity: 0.9, lineCap: 'round' };
+    state.routeLayers.push(L.polyline(leg.points.map((point) => [point.lat, point.lng]), style).addTo(map));
   }
 
   const boardIcon = L.divIcon({
@@ -635,12 +1224,14 @@ async function applyDriveRoutes(routes, token) {
   drawDriveSelection();
 }
 
-function driveMinutes(duration) {
-  return Math.max(1, Math.round(duration / 60));
-}
-
 function driveRoutesEstimated() {
   return state.routeCandidates.every((candidate) => candidate.estimated);
+}
+
+function selectDrivePlan(index) {
+  if (!state.routeCandidates[index] || index === state.selectedRouteIndex) return;
+  state.selectedRouteIndex = index;
+  drawDriveSelection();
 }
 
 function drawDriveSelection() {
@@ -652,11 +1243,9 @@ function drawDriveSelection() {
   els.routeTag.textContent = driveRoutesEstimated()
     ? '直线估算'
     : `OSRM · 自驾 · ${state.routeCandidates.length} 条方案`;
-  els.routeSummary.textContent = `${formatMeters(selected.total)} · 约 ${driveMinutes(selected.duration)} 分钟`;
-  els.routeNote.hidden = false;
-  els.routeNote.textContent = selected.estimated
-    ? `路径服务暂不可用，当前为直线估算 · ${SAFETY_DISCLAIMER}`
-    : SAFETY_DISCLAIMER;
+  els.routeSummary.textContent = `${formatMeters(selected.total)} · ${formatDuration(selected.duration)}`;
+  els.routeNote.hidden = !selected.estimated;
+  els.routeNote.textContent = selected.estimated ? '路径服务暂不可用，当前为直线估算' : '';
 
   clearRouteLayers();
   const color = ink();
@@ -681,7 +1270,7 @@ function drawDriveSelection() {
   state.routeLayers.push(selectedLine);
 
   renderDriveOptions();
-  renderDriveSafety(selected);
+  renderRouteSafety(selected, true);
 
   const bounds = L.latLngBounds(
     state.routeCandidates.flatMap((candidate) => candidate.points.map((point) => [point.lat, point.lng])),
@@ -692,6 +1281,7 @@ function drawDriveSelection() {
     maxZoom: 16,
   });
   state.viewMode = 'both';
+  syncStartNavButton();
 }
 
 function renderDriveOptions() {
@@ -714,7 +1304,7 @@ function renderDriveOptions() {
 
     const metric = document.createElement('span');
     metric.className = 'mt-1 block text-sm font-medium tracking-tight';
-    metric.textContent = `${formatMeters(candidate.total)} · 约 ${driveMinutes(candidate.duration)} 分钟`;
+    metric.textContent = `${formatMeters(candidate.total)} · ${formatDuration(candidate.duration)}`;
 
     const score = document.createElement('span');
     score.className = `zen-grade-${grade.tone} mt-1 block text-[0.6875rem]`;
@@ -725,7 +1315,7 @@ function renderDriveOptions() {
   }
 }
 
-function renderDriveSafety(candidate) {
+function renderRouteSafety(candidate, showDisclaimer = false) {
   els.routeSafety.hidden = false;
   els.routeSafety.textContent = '';
 
@@ -747,17 +1337,23 @@ function renderDriveSafety(candidate) {
     if (factor.weight > 0) row.append(` −${factor.weight}`);
     els.routeSafety.append(row);
   }
+
+  els.safetyDisclaimer.hidden = !showDisclaimer;
 }
 
-function bindDriveUI() {
-  if (!isDrive()) return;
+function bindRouteCards() {
   els.routeOptions.addEventListener('click', (event) => {
     const button = event.target.closest('[data-index]');
     if (!button) return;
     const index = Number(button.dataset.index);
-    if (!state.routeCandidates[index] || index === state.selectedRouteIndex) return;
-    state.selectedRouteIndex = index;
-    drawDriveSelection();
+    if (isTransit()) selectTransitPlan(index);
+    else selectDrivePlan(index);
+  });
+
+  els.routeStrategy.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-strategy]');
+    if (!button) return;
+    switchTransitStrategy(button.dataset.strategy);
   });
 }
 
@@ -780,10 +1376,24 @@ function updateRemindStatus(result) {
     return;
   }
   if (result.alert) return;
+  if (isLongHaulLeg(result.along)) {
+    els.remindStatus.textContent = '行程较长，请留意时间';
+    return;
+  }
   const parts = [];
   if (!result.boarded) parts.push(`距上车站 ${formatMeters(result.boardingRemaining)}`);
   parts.push(`距下车站 ${formatMeters(result.alightingRemaining)}`);
   els.remindStatus.textContent = parts.join(' · ');
+}
+
+function isLongHaulLeg(along) {
+  if (!state.route || !Number.isFinite(along)) return false;
+  let acc = 0;
+  for (const leg of state.route.legs) {
+    acc += buildRouteMetrics(leg.points).total;
+    if (along <= acc) return leg.kind === 'railway' || leg.kind === 'taxi';
+  }
+  return false;
 }
 
 function showBanner(title, sub) {
@@ -824,6 +1434,205 @@ function speak(text) {
   } catch {}
 }
 
+const NAV_OFF_LIMIT = 80;
+const NAV_RECOVER_LIMIT = 50;
+const NAV_CONFIRM_HITS = 2;
+const NAV_ACCURACY_LIMIT = 150;
+const NAV_PAN_INTERVAL = 1200;
+const NAV_ZOOM = 17;
+const NAV_ARRIVE_LIMIT = 50;
+
+function ensureRouteMetrics(route) {
+  if (!route) return null;
+  if (!Array.isArray(route.cum) || route.cum.length !== route.points.length) {
+    const metrics = buildRouteMetrics(route.points);
+    route.cum = metrics.cum;
+    route.total = metrics.total;
+  }
+  return route;
+}
+
+function syncStartNavButton() {
+  els.startNav.hidden = !state.route || state.nav.mode !== 'off';
+}
+
+function startNavigation() {
+  if (!state.route || state.nav.mode !== 'off') return;
+  ensureRouteMetrics(state.route);
+  state.nav.mode = 'following';
+  state.nav.offHits = 0;
+  state.nav.view = { center: map.getCenter(), zoom: map.getZoom() };
+  document.body.dataset.nav = 'on';
+  els.navBar.hidden = false;
+  els.navExit.hidden = false;
+  els.navOffRoute.hidden = true;
+  els.navLeg.hidden = !isTransit();
+  syncStartNavButton();
+  if (state.lastFix) followNavPosition(state.lastFix);
+  updateNavigation(state.lastFix);
+}
+
+function stopNavigation() {
+  if (state.nav.mode === 'off') return;
+  state.nav.mode = 'off';
+  state.nav.offHits = 0;
+  delete document.body.dataset.nav;
+  els.navBar.hidden = true;
+  els.navExit.hidden = true;
+  els.navOffRoute.hidden = true;
+  syncStartNavButton();
+  window.clearTimeout(state.bannerTimer);
+  els.banner.hidden = true;
+  const view = state.nav.view;
+  state.nav.view = null;
+  if (view) map.setView(view.center, view.zoom, { animate: false });
+}
+
+function followNavPosition(fix) {
+  const now = Date.now();
+  const target = L.latLng(fix.lat, fix.lng);
+  if (map.getZoom() < NAV_ZOOM) {
+    map.setView(target, NAV_ZOOM);
+    state.nav.lastPan = now;
+    return;
+  }
+  if (now - state.nav.lastPan < NAV_PAN_INTERVAL) return;
+  state.nav.lastPan = now;
+  map.panTo(target, { animate: true, duration: 0.6 });
+}
+
+function updateNavigation(fix) {
+  if (state.nav.mode === 'off' || state.nav.mode === 'arrived' || !state.route || !fix) return;
+  const route = ensureRouteMetrics(state.route);
+  const projection = projectOnRoute(route.points, route.cum, fix);
+  const remaining = Math.max(0, route.total - projection.along);
+  const accurate = Number.isFinite(fix.accuracy) && fix.accuracy <= NAV_ACCURACY_LIMIT;
+
+  if (accurate && (state.nav.mode === 'following' || state.nav.mode === 'off-route')) {
+    const drifted = projection.offset > (state.nav.mode === 'off-route' ? NAV_RECOVER_LIMIT : NAV_OFF_LIMIT);
+    const advancing = state.nav.mode === 'following' ? drifted : !drifted;
+    state.nav.offHits = advancing ? state.nav.offHits + 1 : 0;
+    if (state.nav.offHits >= NAV_CONFIRM_HITS) {
+      if (state.nav.mode === 'following') enterNavOffRoute();
+      else leaveNavOffRoute();
+    }
+  }
+
+  renderNavMetrics(route, remaining);
+
+  if (state.nav.mode !== 'following') return;
+  if (isTransit()) els.navLeg.textContent = transitGuidance(route, projection.along);
+  followNavPosition(fix);
+  if (remaining <= NAV_ARRIVE_LIMIT) markNavArrived();
+}
+
+function enterNavOffRoute() {
+  state.nav.mode = 'off-route';
+  state.nav.offHits = 0;
+  els.navOffRoute.hidden = false;
+}
+
+function leaveNavOffRoute() {
+  state.nav.mode = 'following';
+  state.nav.offHits = 0;
+  els.navOffRoute.hidden = true;
+}
+
+function renderNavMetrics(route, remaining) {
+  els.navRemain.textContent = `还剩 ${formatMeters(remaining)}`;
+  const seconds = route.total > 0 ? (remaining / route.total) * route.duration : 0;
+  els.navEta.textContent = seconds > 0 ? `${formatDuration(seconds)} · ${clockText(Date.now() + seconds * 1000)} 到` : '';
+}
+
+function clockText(ms) {
+  const date = new Date(ms);
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
+function markNavArrived() {
+  state.nav.mode = 'arrived';
+  state.nav.offHits = 0;
+  els.navOffRoute.hidden = true;
+  els.navRemain.textContent = '已到达目的地附近';
+  els.navEta.textContent = '';
+  els.navLeg.hidden = false;
+  els.navLeg.textContent = isTransit() ? '行程结束，请确认已到站' : '行程结束';
+  showBanner('已到达', '目的地就在附近');
+  speak('已到达目的地附近');
+}
+
+function transitGuidance(route, along) {
+  const legs = route.legs;
+  let acc = 0;
+  for (const leg of legs) {
+    const length = buildRouteMetrics(leg.points).total;
+    if (along <= acc + length || leg === legs[legs.length - 1]) return legGuidance(leg, along - acc, length);
+    acc += length;
+  }
+  return '';
+}
+
+function legGuidance(leg, into, length) {
+  if (leg.kind === 'taxi') return `打车前往${leg.toName || '目的地'}`;
+  if (leg.kind === 'railway') {
+    const clock = formatAmapClock(leg.fromTime);
+    return `乘 ${leg.name}${clock ? ` ${clock} 开` : ''}，在 ${leg.toName || '终点'} 下车`;
+  }
+  if (!leg.walking) {
+    const via = leg.viaNum ? ` · 途经 ${leg.viaNum} 站` : '';
+    return `乘 ${leg.label || leg.name}${via}，在 ${leg.toName || '下车站'} 下车`;
+  }
+  const span = leg.distance || length;
+  return nextWalkStep(leg, into) || `步行 ${formatMeters(Math.max(0, span - into))} 至 ${leg.to || '目的地'}`;
+}
+
+function nextWalkStep(leg, into) {
+  let acc = 0;
+  for (const step of leg.steps || []) {
+    acc += step.distance || 0;
+    if (acc > into + 15) return walkStepText(step, leg);
+  }
+  return '';
+}
+
+function walkStepText(step, leg) {
+  if (!step.text) return '';
+  if (leg.to && /到达目的地$/.test(step.text)) return step.text.replace(/到达目的地$/, `到达${leg.to}`);
+  return step.text;
+}
+
+async function rerouteFromNavigation() {
+  if (state.nav.rerouting || !state.lastFix) return;
+  state.nav.rerouting = true;
+  els.navReroute.disabled = true;
+  els.navReroute.textContent = '正在规划…';
+
+  try {
+    const fix = state.lastFix;
+    setOrigin(L.latLng(fix.lat, fix.lng), { manual: false, accuracy: fix.accuracy });
+    resetRouteState();
+    if (isTransit()) await planTransitTrip();
+    else if (isWalk()) await planWalkTrip();
+    else await planDriveTrip();
+    if (!state.route) throw new Error('route-empty');
+
+    ensureRouteMetrics(state.route);
+    state.nav.mode = 'following';
+    state.nav.offHits = 0;
+    els.navOffRoute.hidden = true;
+    els.navLeg.hidden = !isTransit();
+    if (state.lastFix) followNavPosition(state.lastFix);
+    updateNavigation(state.lastFix);
+  } catch {
+    els.navOffRoute.hidden = false;
+    showBanner('重新规划失败', '检查网络后再试一次');
+  } finally {
+    state.nav.rerouting = false;
+    els.navReroute.disabled = false;
+    els.navReroute.textContent = '重新规划';
+  }
+}
+
 function initialThreshold() {
   const stored = Number(readStorage(THRESHOLD_KEY));
   return [300, 500, 800, 1000].includes(stored) ? stored : 500;
@@ -832,6 +1641,12 @@ function initialThreshold() {
 function bindTransitUI() {
   const threshold = initialThreshold();
   els.threshold.value = String(threshold);
+
+  els.transitCrossToggle.addEventListener('click', () => {
+    const open = els.transitLegs.hidden;
+    els.transitLegs.hidden = !open;
+    els.transitCrossToggle.textContent = open ? '收起分段' : '查看分段';
+  });
 
   els.threshold.addEventListener('change', () => {
     const value = Number(els.threshold.value) || 500;
@@ -924,7 +1739,7 @@ async function loadFuel(force = false) {
       if (els.gasList.children.length) els.gasStatus.textContent += ' · 离线缓存';
     }
   } catch {
-    els.gasStatus.textContent = '加油站服务暂不可用，稍后重试';
+    els.gasStatus.textContent = '服务繁忙，稍后重试';
   } finally {
     state.fuel.loading = false;
   }
@@ -1049,7 +1864,7 @@ function syncGasSelection() {
 }
 
 async function loadWeather(force = false) {
-  if (trip?.mode !== 'walk') return;
+  if (!trip) return;
   const place = state.origin || state.dest;
   if (!place) return;
 
@@ -1089,6 +1904,36 @@ async function loadWeather(force = false) {
   }
 }
 
+async function loadDestWeather() {
+  if (!state.origin || !state.dest || distanceBetween(state.origin, state.dest) <= 10000) {
+    els.weatherDest.hidden = true;
+    return;
+  }
+
+  const place = { lat: state.dest.lat, lng: state.dest.lng };
+  const cacheKey = `zenmap:weather:v1:${place.lat.toFixed(2)},${place.lng.toFixed(2)}`;
+  let weather = ZenStore.get(cacheKey, WEATHER_TTL);
+  let offline = false;
+  try {
+    if (!weather) {
+      weather = await fetchWeather(place);
+      ZenStore.set(cacheKey, weather);
+    }
+  } catch {
+    weather = ZenStore.getStale(cacheKey);
+    offline = true;
+  }
+
+  if (!weather) {
+    els.weatherDest.hidden = true;
+    return;
+  }
+
+  els.weatherDestTemp.textContent = `${weather.temp}`;
+  els.weatherDestText.textContent = `${weather.text} · 体感 ${weather.feels}°${offline ? ' · 离线缓存' : ''}`;
+  els.weatherDest.hidden = false;
+}
+
 function renderWeather(weather, fromDest) {
   els.weatherPanel.hidden = false;
   els.weatherTemp.textContent = `${weather.temp}°`;
@@ -1118,6 +1963,13 @@ function syncSheetOffset() {
   window.addEventListener('resize', update);
 }
 
+function syncTopbarOffset() {
+  const update = () => document.documentElement.style.setProperty('--z-topbar', `${els.topbar.offsetHeight}px`);
+  update();
+  if ('ResizeObserver' in window) new ResizeObserver(update).observe(els.topbar);
+  window.addEventListener('resize', update);
+}
+
 function bindTheme() {
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
     const color = ink();
@@ -1142,27 +1994,79 @@ function bindEvents() {
   els.locate.addEventListener('click', onLocate);
   els.manualLink.addEventListener('click', () => showForm(true));
   els.form.addEventListener('submit', onSubmit);
+  els.destSwitch.addEventListener('click', renderCandidatePanel);
+  els.destCandidatesClose.addEventListener('click', () => {
+    hideCandidatePanel();
+    els.destSwitch.hidden = false;
+  });
+  els.destCandidateList.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-candidate-index]');
+    if (button) selectCandidate(Number(button.dataset.candidateIndex));
+  });
+  els.destRetype.addEventListener('click', () => {
+    window.location.href = `./index.html?dest=${encodeURIComponent(trip.destination)}`;
+  });
+  els.startNav.addEventListener('click', startNavigation);
+  els.navExit.addEventListener('click', stopNavigation);
+  els.navReroute.addEventListener('click', rerouteFromNavigation);
   window.addEventListener('pagehide', stopWatch);
 }
 
-function mountTiles() {
-  const source = TILE_SOURCES[tileIndex];
+function mountTiles(source = TILE_PRIMARY) {
+  if (tileLayer) map.removeLayer(tileLayer);
   tileErrors = 0;
-  tileLayer = L.tileLayer(source.url, { maxZoom: source.maxZoom, attribution: OSM_ATTRIBUTION }).addTo(map);
+  tileLayer = L.tileLayer(source.url, { maxZoom: source.maxZoom, attribution: TILE_ATTRIBUTION }).addTo(map);
+  tileLayer.on('tileload', () => {
+    if (document.querySelectorAll('.leaflet-tile-loaded').length >= TILE_SKELETON_MIN) hideMapSkeleton();
+  });
   tileLayer.on('tileerror', () => {
     tileErrors += 1;
-    if (tileErrors < 3 || tileIndex >= TILE_SOURCES.length - 1) return;
-    tileIndex += 1;
-    map.removeLayer(tileLayer);
-    mountTiles();
+    if (tileErrors < TILE_ERROR_LIMIT || tileProbed || !navigator.onLine) return;
+    probeTileFallback();
   });
+}
+
+function probeTileFallback() {
+  const zoom = Math.round(map.getZoom());
+  const tile = map.project(map.getCenter(), zoom).divideBy(256).floor();
+  tileProbed = true;
+  loadTileImage(TILE_FALLBACK.url, zoom, tile.x, tile.y).then((ok) => {
+    if (ok) {
+      mountTiles(TILE_FALLBACK);
+      return;
+    }
+    tileProbed = false;
+    tileErrors = 0;
+  });
+}
+
+function loadTileImage(url, zoom, x, y) {
+  return new Promise((resolve) => {
+    const image = new Image();
+    const finish = (ok) => {
+      window.clearTimeout(timer);
+      image.onload = null;
+      image.onerror = null;
+      resolve(ok);
+    };
+    const timer = window.setTimeout(() => finish(false), TILE_PROBE_TIMEOUT);
+    image.onload = () => finish(true);
+    image.onerror = () => finish(false);
+    image.src = url.replace('{z}', zoom).replace('{x}', x).replace('{y}', y);
+  });
+}
+
+function hideMapSkeleton() {
+  if (els.mapSkeleton) els.mapSkeleton.hidden = true;
 }
 
 function mountRouteChrome() {
   els.routeTitle.textContent = MODE_TITLE[trip.mode] || '路线';
   els.routeStops.hidden = !isTransit();
+  els.transitCross.hidden = true;
   els.routeRemind.hidden = !isTransit();
   els.remindStatus.hidden = !isTransit();
+  els.routeStrategy.hidden = !isTransit();
 }
 
 function boot() {
@@ -1188,13 +2092,14 @@ function boot() {
   state.engine = createReminderEngine({ threshold: initialThreshold() });
 
   syncSheetOffset();
+  syncTopbarOffset();
   mountRouteChrome();
   bindTheme();
   bindNetwork();
   bindEvents();
   bindTransitUI();
   bindFuel();
-  bindDriveUI();
+  bindRouteCards();
 
   startWatch();
   resolveDestination();

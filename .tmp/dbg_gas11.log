@@ -1,7 +1,0 @@
-routeTag: OSRM · 自驾 · 3 条方案
-gasBtnHidden: false
-after2000ms: {"panelHidden":false,"rows":0,"status":"正在查找附近加油站…","cache":0}
-after4000ms: {"panelHidden":false,"rows":0,"status":"正在查找附近加油站…","cache":0}
-after6000ms: {"panelHidden":false,"rows":0,"status":"正在查找附近加油站…","cache":0}
-after8000ms: {"panelHidden":false,"rows":0,"status":"正在查找附近加油站…","cache":0}
-requests: ["https://tile.openstreetmap.de/12/3373/1550.png","https://tile.openstreetmap.de/12/3370/1555.png","https://tile.openstreetmap.de/12/3373/1555.png","https://overpass.openstreetmap.fr/api/interpreter?data=%5Bout%3Ajson%5D%5Btimeout%3A15%5D%","https://overpass.openstreetmap.fr/api/interpreter?data=%5Bout%3Ajson%5D%5Btimeout%3A15%5D%","https://overpass-api.de/api/interpreter?data=%5Bout%3Ajson%5D%5Btimeout%3A15%5D%3Bnwr%5B%2"]

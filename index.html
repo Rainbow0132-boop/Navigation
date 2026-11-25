@@ -9,18 +9,12 @@
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><polygon points='3 11 22 2 13 21 11 13 3 11' fill='%231d1d1f' stroke='%23ffffff' stroke-width='1.2'/></svg>" />
 
-  <script src="./assets/vendor/tailwind-browser.js"></script>
-  <link rel="stylesheet" href="./assets/css/zen.css" />
+  <link rel="preconnect" href="https://tile.openstreetmap.de" />
+  <link rel="preconnect" href="https://restapi.amap.com" />
+  <link rel="preconnect" href="https://photon.komoot.io" />
 
-  <style type="text/tailwindcss">
-    @theme {
-      --color-zen-surface: var(--z-surface);
-      --color-zen-ink: var(--z-ink);
-      --color-zen-line: var(--z-line);
-      --color-zen-ghost: var(--z-ghost);
-      --color-zen-fill: var(--z-fill);
-    }
-  </style>
+  <link rel="stylesheet" href="./assets/css/zen.css" />
+  <link rel="stylesheet" href="./assets/css/zen-tw.css" />
 </head>
 <body class="min-h-dvh bg-zen-surface text-zen-ink antialiased">
 

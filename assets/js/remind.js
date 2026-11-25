@@ -132,7 +132,7 @@ function createReminderEngine(options = {}) {
     lastFixTime = now;
 
     const projection = projectOnRoute(route.points, route.cum, fix);
-    const base = { accuracy: fix.accuracy, offset: projection.offset };
+    const base = { accuracy: fix.accuracy, offset: projection.offset, along: projection.along };
 
     if (projection.offset > config.offRouteLimit) {
       resetCounters();

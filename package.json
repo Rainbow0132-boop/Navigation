@@ -1,0 +1,9 @@
+{
+  "private": true,
+  "scripts": {
+    "build:css": "tailwindcss -i assets/css/tw.source.css -o assets/css/zen-tw.css --minify"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "4.3.5"
+  }
+}
